@@ -48,10 +48,10 @@ Secrets à créer dans *Settings › Secrets and variables › Actions* :
 
 | Secret | Valeur |
 |---|---|
-| `SOMNA_KEYSTORE_BASE64` | contenu de `somna-release.jks.b64` |
-| `SOMNA_KEYSTORE_PASSWORD` | mot de passe du keystore |
-| `SOMNA_KEY_ALIAS` | `somna` |
-| `SOMNA_KEY_PASSWORD` | mot de passe de la clé |
+| `KEYSTORE_BASE64` | contenu de `somna-release.jks.b64` |
+| `KEYSTORE_PASSWORD` | mot de passe du keystore |
+| `KEY_ALIAS` | `somna` |
+| `KEY_PASSWORD` | mot de passe de la clé |
 
 Publier une version :
 
