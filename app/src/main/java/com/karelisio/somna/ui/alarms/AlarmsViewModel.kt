@@ -11,12 +11,14 @@ import com.karelisio.somna.data.SomnaSettings
 import java.time.DayOfWeek
 import java.time.ZonedDateTime
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class AlarmsViewModel(private val container: AppContainer) : ViewModel() {
     val alarms: StateFlow<List<AlarmEntity>?> =
@@ -46,15 +48,19 @@ class AlarmEditViewModel(private val container: AppContainer, val alarmId: Int) 
         container.settings.settings.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SomnaSettings())
 
     private var saveJob: Job? = null
+    /** Latest edit not yet reflected by the database flow, so quick successive edits all apply. */
+    private var pending: AlarmEntity? = null
 
     /** Applies a change immediately; text edits are debounced. */
     fun update(debounce: Boolean = false, change: (AlarmEntity) -> AlarmEntity) {
-        val current = alarm.value ?: return
+        val current = pending ?: alarm.value ?: return
         val updated = change(current)
+        pending = updated
         saveJob?.cancel()
         saveJob = viewModelScope.launch {
             if (debounce) delay(400)
-            container.alarms.save(updated)
+            withContext(NonCancellable) { container.alarms.save(updated) }
+            if (pending == updated) pending = null
         }
     }
 

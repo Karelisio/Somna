@@ -8,6 +8,7 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -35,13 +36,14 @@ fun sunrisePalette(progress: Float): List<Color> {
 fun SunriseSky(progress: Float, modifier: Modifier = Modifier, pulse: Boolean = false) {
     val stars = remember { List(70) { Triple(Random.nextFloat(), Random.nextFloat() * 0.75f, Random.nextFloat()) } }
     val transition = rememberInfiniteTransition(label = "sky")
-    val twinkle = transition.animateFloat(
+    // Read in the draw phase only (no recomposition per frame).
+    val twinkle by transition.animateFloat(
         0f, (2 * Math.PI).toFloat(),
         infiniteRepeatable(tween(5_000, easing = LinearEasing), RepeatMode.Restart), label = "twinkle",
-    ).value
-    val breathe = transition.animateFloat(
+    )
+    val breathe by transition.animateFloat(
         0f, 1f, infiniteRepeatable(tween(2_400), RepeatMode.Reverse), label = "breathe",
-    ).value
+    )
     Canvas(modifier) {
         val p = progress.coerceIn(0f, 1f)
         val palette = sunrisePalette(p)

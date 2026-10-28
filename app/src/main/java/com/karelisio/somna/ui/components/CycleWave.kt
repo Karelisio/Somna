@@ -48,9 +48,9 @@ fun CycleWave(
             initialValue = 0f, targetValue = 1f,
             animationSpec = infiniteRepeatable(tween(6_000, easing = LinearEasing), RepeatMode.Restart),
             label = "travel",
-        ).value
+        )
     } else {
-        1f
+        null
     }
     val path = remember { Path() }
     val segment = remember { Path() }
@@ -95,7 +95,7 @@ fun CycleWave(
         }
         // Travelling glow
         if (draw.value >= 1f && animate) {
-            val pos = measure.getPosition(length * travel)
+            val pos = measure.getPosition(length * (travel?.value ?: 1f))
             drawCircle(accent.copy(alpha = 0.25f), radius = stroke * 3.2f, center = pos)
             drawCircle(accent, radius = stroke * 1.2f, center = pos)
         }

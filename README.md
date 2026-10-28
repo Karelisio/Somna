@@ -23,8 +23,9 @@ Package : `com.karelisio.somna` · minSdk 26 · targetSdk 37
 Prérequis : JDK 17+ (21 recommandé), Android SDK avec `platforms;android-37.0` et `build-tools;37.0.0`.
 
 ```bash
-./gradlew testDebugUnitTest    # tests unitaires
-./gradlew assembleDebug        # APK de debug (id com.karelisio.somna.debug)
+./gradlew testDebugUnitTest                # tests unitaires + Robolectric (flux de réveil, démarrage)
+./gradlew assembleDebug                    # APK de debug (id com.karelisio.somna.debug)
+./gradlew testDebugUnitTest -Pscreenshots  # captures de tous les écrans (clair/sombre) dans build/screenshots
 ```
 
 ## Signature et CI

@@ -152,7 +152,7 @@ fun AlarmScreen(
     val enterEffects = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
     val enterSpatial = MaterialTheme.motionScheme.defaultSpatialSpec<Float>()
     val exitEffects = MaterialTheme.motionScheme.fastEffectsSpec<Float>()
-    val textColor = lerp(Color.White, Color(0xFF14183A), ((sky - 0.55f) / 0.3f).coerceIn(0f, 1f))
+    val textColor = lerp(Color.White, Color(0xFF14183A), ((sky - 0.8f) / 0.15f).coerceIn(0f, 1f))
 
     Box(Modifier.fillMaxSize()) {
         SunriseSky(sky, Modifier.fillMaxSize(), pulse = stage == Stage.Ringing)

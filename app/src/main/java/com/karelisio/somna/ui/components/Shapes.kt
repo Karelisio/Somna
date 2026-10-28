@@ -96,22 +96,22 @@ fun ShapeContainer(
     rotationPeriodMs: Int = 12_000,
     content: @Composable () -> Unit = {},
 ) {
+    // The angle is read in the draw phase only: rotating doesn't recompose.
     val angle = if (rotate) {
-        val transition = rememberInfiniteTransition(label = "shape")
-        transition.animateFloat(
+        rememberInfiniteTransition(label = "shape").animateFloat(
             initialValue = 0f, targetValue = 360f,
             animationSpec = infiniteRepeatable(tween(rotationPeriodMs, easing = LinearEasing), RepeatMode.Restart),
             label = "shapeAngle",
-        ).value
+        )
     } else {
-        0f
+        null
     }
     val shape = remember(polygon) { MorphShape(Morph(polygon, polygon), { 0f }) }
     Box(modifier.size(size), contentAlignment = Alignment.Center) {
         Box(
             Modifier
                 .matchParentSize()
-                .graphicsLayer { rotationZ = angle }
+                .graphicsLayer { rotationZ = angle?.value ?: 0f }
                 .clip(shape)
                 .background(containerColor),
         )

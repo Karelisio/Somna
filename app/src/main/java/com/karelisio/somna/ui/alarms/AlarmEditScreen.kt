@@ -135,9 +135,13 @@ fun AlarmEditScreen(alarmId: Int, onBack: () -> Unit) {
         ) {
             TimeHeader(a, onEdit = { showPicker = true })
             DaySelector(a.days, onChange = { days -> vm.update { it.copy(days = days, enabled = true) } })
+            var label by remember(a.id) { mutableStateOf(a.label) }
             OutlinedTextField(
-                value = a.label,
-                onValueChange = { text -> vm.update(debounce = true) { it.copy(label = text.take(40)) } },
+                value = label,
+                onValueChange = { text ->
+                    label = text.take(40)
+                    vm.update(debounce = true) { it.copy(label = label) }
+                },
                 label = { Text("Nom du réveil") },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
