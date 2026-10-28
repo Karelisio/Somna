@@ -2,6 +2,10 @@
 
 Les notes d'une version sont reprises telles quelles dans la GitHub Release et affichées dans l'appli.
 
+## 1.0.2
+
+- **Mise à jour intégrée** : la fenêtre d'installation s'ouvre aussi depuis Réglages › « Rechercher une mise à jour », et un bouton « Mettre à jour » y reste tant qu'une version est disponible.
+
 ## 1.0.1
 
 - **Arrêt du réveil sans pic sonore** : le son est coupé net et le volume d'alarme du téléphone n'est restauré qu'une fois le silence revenu.

@@ -27,6 +27,7 @@ import com.karelisio.somna.ui.components.hideStatusBar
 import com.karelisio.somna.ui.navigation.SomnaNavHost
 import com.karelisio.somna.ui.theme.LocalDarkTheme
 import com.karelisio.somna.ui.theme.SomnaTheme
+import com.karelisio.somna.ui.update.UpdateSheetHost
 import kotlinx.coroutines.flow.MutableStateFlow
 
 class MainActivity : ComponentActivity() {
@@ -84,6 +85,8 @@ class MainActivity : ComponentActivity() {
                     LocalSomna provides viewModel,
                 ) {
                     SomnaNavHost(settings = s, destination = destination)
+                    // Above every screen (settings included), once the onboarding is done.
+                    if (s.onboardingDone) UpdateSheetHost()
                 }
             }
         }

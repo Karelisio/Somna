@@ -40,6 +40,8 @@ import androidx.compose.material.icons.rounded.Update
 import androidx.compose.material.icons.rounded.Vibration
 import androidx.compose.material.icons.rounded.VolumeUp
 import androidx.compose.material.icons.rounded.WbTwilight
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -396,12 +398,20 @@ fun SettingsScreen(onBack: () -> Unit, onOpenPermissions: () -> Unit, onOpenBatt
             SectionTitle("Mises à jour")
             var checking by remember { mutableStateOf(false) }
             var checkMessage by remember { mutableStateOf<String?>(null) }
+            val pendingUpdate by somna.pendingUpdate.collectAsStateWithLifecycle()
+            val openUpdate = {
+                haptics.confirm()
+                somna.updateSheetDismissed = false
+                somna.forceShowUpdate = true
+            }
             SettingsGroup(
                 items = listOf(
                     {
                         SettingsRow(
                             title = "Rechercher une mise à jour",
-                            subtitle = checkMessage ?: "Version installée : ${BuildConfig.VERSION_NAME}",
+                            subtitle = checkMessage
+                                ?: pendingUpdate?.let { "Version ${it.version} disponible (installée : ${BuildConfig.VERSION_NAME})" }
+                                ?: "Version installée : ${BuildConfig.VERSION_NAME}",
                             icon = Icons.Rounded.SystemUpdate,
                             onClick = {
                                 if (checking) return@SettingsRow
@@ -412,8 +422,9 @@ fun SettingsScreen(onBack: () -> Unit, onOpenPermissions: () -> Unit, onOpenBatt
                                     checking = false
                                     checkMessage = when (result) {
                                         is CheckResult.Available -> {
-                                            haptics.confirm()
-                                            somna.forceShowUpdate = true
+                                            // A manual check always offers it, even if this version was skipped.
+                                            somna.edit { setSkippedVersion("") }
+                                            openUpdate()
                                             "Version ${result.info.version} disponible"
                                         }
                                         CheckResult.UpToDate, CheckResult.Throttled -> "Somna est à jour ✓"
@@ -422,8 +433,12 @@ fun SettingsScreen(onBack: () -> Unit, onOpenPermissions: () -> Unit, onOpenBatt
                                 }
                             },
                             trailing = {
-                                AnimatedContent(checking, label = "checking") { busy ->
-                                    if (busy) LoadingIndicator(Modifier.size(36.dp)) else Spacer(Modifier.size(36.dp))
+                                AnimatedContent(checking to (pendingUpdate != null), label = "checking") { (busy, available) ->
+                                    when {
+                                        busy -> LoadingIndicator(Modifier.size(36.dp))
+                                        available -> Button(onClick = openUpdate, shapes = ButtonDefaults.shapes()) { Text("Mettre à jour") }
+                                        else -> Spacer(Modifier.size(36.dp))
+                                    }
                                 }
                             },
                         )

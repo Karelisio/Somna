@@ -47,7 +47,6 @@ import com.karelisio.somna.ui.alarms.AlarmsScreen
 import com.karelisio.somna.ui.components.rememberHaptics
 import com.karelisio.somna.ui.journal.JournalScreen
 import com.karelisio.somna.ui.sounds.SoundsScreen
-import com.karelisio.somna.ui.update.UpdateSheetHost
 import kotlinx.coroutines.flow.MutableStateFlow
 
 private enum class Tab(val label: String, val icon: ImageVector, val selectedIcon: ImageVector) {
@@ -137,7 +136,6 @@ fun MainScreen(
             }
         }
     }
-    UpdateSheetHost()
 }
 
 @Composable
