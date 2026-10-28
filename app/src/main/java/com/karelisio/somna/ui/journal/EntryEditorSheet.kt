@@ -32,6 +32,7 @@ import com.karelisio.somna.core.toEpochMillis
 import com.karelisio.somna.core.toLocalDateTime
 import com.karelisio.somna.data.SleepEntry
 import com.karelisio.somna.ui.components.EmojiRating
+import com.karelisio.somna.ui.components.ImmersiveDialogWindow
 import com.karelisio.somna.ui.components.SomnaTimePickerDialog
 import com.karelisio.somna.ui.components.SpringCard
 import java.time.Duration
@@ -52,6 +53,7 @@ fun EntryEditorSheet(
     var editing by remember { mutableStateOf<String?>(null) }
 
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheet) {
+        ImmersiveDialogWindow()
         Column(Modifier.padding(horizontal = 24.dp).padding(bottom = 32.dp)) {
             Text(if (entry.id == 0L) "Ajouter une nuit" else "Modifier la nuit", style = MaterialTheme.typography.headlineSmall)
             Spacer(Modifier.height(20.dp))

@@ -23,6 +23,7 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.karelisio.somna.ui.LocalSomna
 import com.karelisio.somna.ui.SomnaViewModel
 import com.karelisio.somna.ui.components.LocalHapticsEnabled
+import com.karelisio.somna.ui.components.hideStatusBar
 import com.karelisio.somna.ui.navigation.SomnaNavHost
 import com.karelisio.somna.ui.theme.LocalDarkTheme
 import com.karelisio.somna.ui.theme.SomnaTheme
@@ -60,6 +61,7 @@ class MainActivity : ComponentActivity() {
             }
         }
         enableEdgeToEdge()
+        window.hideStatusBar()
         if (savedInstanceState == null) {
             destination.value = intent.getStringExtra(EXTRA_DESTINATION)
             viewModel.checkUpdateOnLaunch()
@@ -74,6 +76,7 @@ class MainActivity : ComponentActivity() {
                     val style = if (dark) SystemBarStyle.dark(Color.TRANSPARENT)
                     else SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT)
                     enableEdgeToEdge(statusBarStyle = style, navigationBarStyle = style)
+                    window.hideStatusBar()
                 }
                 CompositionLocalProvider(
                     LocalHapticsEnabled provides s.haptics,
@@ -83,6 +86,12 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        // Back from a dialog, the system settings or the notification shade: hide it again.
+        if (hasFocus) window.hideStatusBar()
     }
 
     override fun onNewIntent(intent: Intent) {

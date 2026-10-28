@@ -3,10 +3,8 @@ package com.karelisio.somna.ui.components
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -26,7 +24,7 @@ fun ScreenHeader(
     Row(
         modifier
             .fillMaxWidth()
-            .windowInsetsPadding(WindowInsets.statusBars)
+            .windowInsetsPadding(TopInsets)
             .padding(start = 24.dp, end = 12.dp, top = 20.dp, bottom = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {

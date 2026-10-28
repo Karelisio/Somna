@@ -46,6 +46,7 @@ fun SomnaTimePickerDialog(
     var keyboard by remember { mutableStateOf(false) }
     val haptics = rememberHaptics()
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        ImmersiveDialogWindow()
         Surface(
             shape = MaterialTheme.shapes.extraLarge,
             color = MaterialTheme.colorScheme.surfaceContainerHigh,

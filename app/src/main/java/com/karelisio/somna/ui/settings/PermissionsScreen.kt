@@ -51,6 +51,7 @@ import com.karelisio.somna.permissions.AppPermissions
 import com.karelisio.somna.permissions.OemBattery
 import com.karelisio.somna.permissions.rememberPermissionRequester
 import com.karelisio.somna.ui.components.AnimatedCheck
+import com.karelisio.somna.ui.components.TopInsets
 import com.karelisio.somna.ui.components.ShapeBadge
 import com.karelisio.somna.ui.components.SpringCard
 import com.karelisio.somna.ui.components.rememberStaggerState
@@ -83,6 +84,7 @@ fun PermissionsScreen(onBack: () -> Unit, onOpenBattery: () -> Unit) {
                 subtitle = { Text("$granted sur ${permissions.size} accordées") },
                 navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Retour") } },
                 scrollBehavior = scrollBehavior,
+                windowInsets = TopInsets,
             )
         },
     ) { padding ->

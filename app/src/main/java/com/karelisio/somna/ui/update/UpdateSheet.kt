@@ -54,6 +54,7 @@ import com.karelisio.somna.permissions.AppPermissions
 import com.karelisio.somna.permissions.rememberPermissionRequester
 import com.karelisio.somna.ui.LocalSomna
 import com.karelisio.somna.ui.components.AnimatedCheck
+import com.karelisio.somna.ui.components.ImmersiveDialogWindow
 import com.karelisio.somna.ui.components.ShapeBadge
 import com.karelisio.somna.ui.components.rememberHaptics
 import com.karelisio.somna.update.InstallState
@@ -103,6 +104,7 @@ private fun UpdateSheet(info: ReleaseInfo, onClose: () -> Unit, onSkip: () -> Un
     val enter = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
     val exit = MaterialTheme.motionScheme.fastEffectsSpec<Float>()
     ModalBottomSheet(onDismissRequest = onClose, sheetState = sheet) {
+        ImmersiveDialogWindow()
         Column(Modifier.padding(horizontal = 24.dp).padding(bottom = 28.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 ShapeBadge(MaterialShapes.Cookie9Sided, Icons.Rounded.SystemUpdate, size = 64.dp)

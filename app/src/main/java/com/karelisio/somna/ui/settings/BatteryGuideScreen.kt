@@ -50,6 +50,7 @@ import com.karelisio.somna.permissions.AppPermissions
 import com.karelisio.somna.permissions.OemBattery
 import com.karelisio.somna.permissions.rememberPermissionRequester
 import com.karelisio.somna.ui.components.AnimatedCheck
+import com.karelisio.somna.ui.components.TopInsets
 import com.karelisio.somna.ui.components.ShapeContainer
 import com.karelisio.somna.ui.components.rememberHaptics
 
@@ -74,6 +75,7 @@ fun BatteryGuideScreen(onBack: () -> Unit) {
                 subtitle = { Text(if (honor) "Guide ${OemBattery.brand} / MagicOS" else "Guide ${OemBattery.brand}") },
                 navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Retour") } },
                 scrollBehavior = scrollBehavior,
+                windowInsets = TopInsets,
             )
         },
     ) { padding ->

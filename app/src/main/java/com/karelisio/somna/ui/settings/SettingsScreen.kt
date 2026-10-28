@@ -78,6 +78,7 @@ import com.karelisio.somna.ui.LocalSomna
 import com.karelisio.somna.ui.components.ConnectedChoice
 import com.karelisio.somna.ui.components.SectionTitle
 import com.karelisio.somna.ui.components.SettingsGroup
+import com.karelisio.somna.ui.components.TopInsets
 import com.karelisio.somna.ui.components.SettingsNav
 import com.karelisio.somna.ui.components.SettingsRow
 import com.karelisio.somna.ui.components.SettingsSlider
@@ -105,6 +106,7 @@ fun SettingsScreen(onBack: () -> Unit, onOpenPermissions: () -> Unit, onOpenBatt
                 title = { Text("Réglages") },
                 navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Retour") } },
                 scrollBehavior = scrollBehavior,
+                windowInsets = TopInsets,
             )
         },
     ) { padding ->

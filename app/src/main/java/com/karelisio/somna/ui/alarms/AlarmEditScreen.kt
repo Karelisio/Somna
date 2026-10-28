@@ -85,6 +85,7 @@ import com.karelisio.somna.ui.components.SettingsRow
 import com.karelisio.somna.ui.components.SettingsSwitch
 import com.karelisio.somna.ui.components.SomnaTimePickerDialog
 import com.karelisio.somna.ui.components.SpringCard
+import com.karelisio.somna.ui.components.TopInsets
 import com.karelisio.somna.ui.components.rememberHaptics
 import com.karelisio.somna.ui.components.rememberMorphShape
 import com.karelisio.somna.ui.components.rememberSoundPreview
@@ -123,6 +124,7 @@ fun AlarmEditScreen(alarmId: Int, onBack: () -> Unit) {
                     }) { Icon(Icons.Rounded.Delete, "Supprimer") }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface),
+                windowInsets = TopInsets,
             )
         },
     ) { padding ->
