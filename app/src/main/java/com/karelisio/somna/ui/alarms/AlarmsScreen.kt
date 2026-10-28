@@ -28,8 +28,11 @@ import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Extension
 import androidx.compose.material.icons.rounded.Sensors
 import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.SkipNext
+import androidx.compose.material.icons.rounded.Undo
 import androidx.compose.material.icons.rounded.WbTwilight
 import androidx.compose.material3.Button
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -91,6 +94,7 @@ fun AlarmsScreen(
     onOpenAlarm: (Int) -> Unit,
     onOpenSettings: () -> Unit,
     onGoToCalculator: () -> Unit,
+    newAlarmRequest: Int = 0,
 ) {
     val container = LocalContext.current.container
     val vm = viewModel { AlarmsViewModel(container) }
@@ -102,10 +106,16 @@ fun AlarmsScreen(
     val listState = rememberLazyListState()
     val fabExpanded by remember { derivedStateOf { listState.firstVisibleItemIndex == 0 } }
     var showPicker by remember { mutableStateOf(false) }
+    LaunchedEffect(newAlarmRequest) {
+        if (newAlarmRequest > 0) showPicker = true
+    }
     val stagger = rememberStaggerState()
 
     val list = alarms ?: return
-    val next = list.filter { it.enabled }.map { it to nextTrigger(it, now) }.minByOrNull { it.second }
+    val revision = vm.revision
+    val next = remember(list, now, revision) {
+        list.filter { it.enabled }.map { it to vm.effectiveNext(it, now) }.minByOrNull { it.second }
+    }
 
     Box(Modifier.fillMaxSize()) {
         LazyColumn(
@@ -168,11 +178,27 @@ fun AlarmsScreen(
                         }
                     },
                 ) {
+                    val skipped = remember(alarm, now, revision) { vm.isSkipped(alarm) }
                     AlarmCard(
                         alarm = alarm,
                         now = now,
+                        nextAt = remember(alarm, now, revision) { vm.effectiveNext(alarm, now) },
+                        skipped = skipped,
                         onClick = { onOpenAlarm(alarm.id) },
                         onToggle = { vm.setEnabled(alarm, it) },
+                        onToggleSkip = {
+                            haptics.confirm()
+                            vm.toggleSkip(alarm)
+                            if (!skipped) scope.launch {
+                                snackbar.currentSnackbarData?.dismiss()
+                                val upcoming = nextTrigger(alarm, ZonedDateTime.now())
+                                val result = snackbar.showSnackbar(
+                                    "Réveil ${TimeFormat.relativeDay(upcoming.toLocalDate()).lowercase()} passé",
+                                    actionLabel = "Annuler",
+                                )
+                                if (result == SnackbarResult.ActionPerformed) vm.toggleSkip(alarm)
+                            }
+                        },
                     )
                 }
             }
@@ -250,7 +276,15 @@ private fun NextAlarmHero(alarm: AlarmEntity?, at: ZonedDateTime?, now: ZonedDat
 }
 
 @Composable
-private fun AlarmCard(alarm: AlarmEntity, now: ZonedDateTime, onClick: () -> Unit, onToggle: (Boolean) -> Unit) {
+private fun AlarmCard(
+    alarm: AlarmEntity,
+    now: ZonedDateTime,
+    nextAt: ZonedDateTime,
+    skipped: Boolean,
+    onClick: () -> Unit,
+    onToggle: (Boolean) -> Unit,
+    onToggleSkip: () -> Unit,
+) {
     val haptics = rememberHaptics()
     val container by animateColorAsState(
         if (alarm.enabled) MaterialTheme.colorScheme.surfaceContainerHigh else MaterialTheme.colorScheme.surfaceContainerLow,
@@ -271,21 +305,37 @@ private fun AlarmCard(alarm: AlarmEntity, now: ZonedDateTime, onClick: () -> Uni
                     style = ClockStyle.copy(fontSize = 52.sp, lineHeight = 56.sp),
                     modifier = Modifier.sharedItem("alarm-time-${alarm.id}"),
                 )
-                val whenText = if (alarm.repeating) daysSummary(alarm.days)
-                else TimeFormat.relativeDay(nextTrigger(alarm, now).toLocalDate())
+                val whenText = when {
+                    alarm.repeating && skipped && alarm.enabled -> "Prochain passé · reprend ${TimeFormat.relativeDay(nextAt.toLocalDate()).lowercase()}"
+                    alarm.repeating -> daysSummary(alarm.days)
+                    else -> TimeFormat.relativeDay(nextTrigger(alarm, now).toLocalDate())
+                }
                 Text(
                     listOf(alarm.label.takeIf { it.isNotBlank() }, whenText).filterNotNull().joinToString(" · "),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Spacer(Modifier.height(8.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                     if (alarm.sunrise) FeatureIcon(Icons.Rounded.WbTwilight, "Lever de soleil")
                     if (alarm.smartWakeMinutes > 0) FeatureIcon(Icons.Rounded.Sensors, "Réveil intelligent")
                     when (alarm.missionType) {
                         Mission.MATH -> FeatureIcon(Icons.Rounded.Calculate, "Mission calcul")
                         Mission.PUZZLE -> FeatureIcon(Icons.Rounded.Extension, "Mission puzzle")
                         Mission.NONE -> Unit
+                    }
+                    if (alarm.repeating && alarm.enabled) {
+                        Spacer(Modifier.weight(1f))
+                        FilledTonalButton(
+                            onClick = onToggleSkip,
+                            shapes = ButtonDefaults.shapes(),
+                            contentPadding = ButtonDefaults.ExtraSmallContentPadding,
+                            modifier = Modifier.height(32.dp),
+                        ) {
+                            Icon(if (skipped) Icons.Rounded.Undo else Icons.Rounded.SkipNext, null, Modifier.size(16.dp))
+                            Spacer(Modifier.width(4.dp))
+                            Text(if (skipped) "Rétablir" else "Passer", style = MaterialTheme.typography.labelMedium)
+                        }
                     }
                 }
             }

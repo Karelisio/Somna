@@ -7,6 +7,7 @@ import com.karelisio.somna.data.AlarmEntity
 import com.karelisio.somna.data.SettingsRepository
 import com.karelisio.somna.routine.BedtimeScheduler
 import com.karelisio.somna.widget.SomnaWidget
+import java.time.LocalDateTime
 import java.time.ZonedDateTime
 import kotlinx.coroutines.flow.Flow
 
@@ -24,7 +25,14 @@ class AlarmRepository(
     suspend fun get(id: Int): AlarmEntity? = dao.get(id)
 
     /** Creates (or re-enables an identical one-shot) alarm using the default alarm settings. */
-    suspend fun create(hour: Int, minute: Int, days: Int = 0, label: String = ""): AlarmEntity {
+    suspend fun create(
+        hour: Int,
+        minute: Int,
+        days: Int = 0,
+        label: String = "",
+        sunrise: Boolean? = null,
+        smartWakeMinutes: Int? = null,
+    ): AlarmEntity {
         val s = settingsRepo.current()
         val existing = if (days == 0) dao.findOneShot(hour, minute) else null
         val alarm = if (existing != null) {
@@ -32,8 +40,8 @@ class AlarmRepository(
         } else {
             val fresh = AlarmEntity(
                 hour = hour, minute = minute, days = days, label = label,
-                sound = s.defaultSound, vibrate = s.vibration, sunrise = s.sunriseEnabled,
-                smartWakeMinutes = s.smartWakeMinutes, mission = s.mission.name,
+                sound = s.defaultSound, vibrate = s.vibration, sunrise = sunrise ?: s.sunriseEnabled,
+                smartWakeMinutes = smartWakeMinutes ?: s.smartWakeMinutes, mission = s.mission.name,
             )
             fresh.copy(id = dao.insert(fresh).toInt())
         }
@@ -85,8 +93,34 @@ class AlarmRepository(
     /** Next enabled alarm and when it rings. */
     suspend fun next(now: ZonedDateTime = ZonedDateTime.now()): Pair<AlarmEntity, ZonedDateTime>? =
         dao.all().filter { it.enabled }
-            .map { it to AlarmScheduler.nextTrigger(it.hour, it.minute, it.days, now) }
+            .map { it to scheduler.effectiveNext(it, now) }
             .minByOrNull { it.second }
+
+    /**
+     * Nap: a one-shot alarm after falling asleep + [minutes] (20–30 min power nap, or one cycle).
+     * No sunrise nor smart window, they don't make sense for a short nap.
+     */
+    suspend fun createNap(minutes: Int): AlarmEntity {
+        val s = settingsRepo.current()
+        val at = LocalDateTime.now().plusMinutes((s.fallAsleepMinutes + minutes).toLong() + 1).withSecond(0).withNano(0)
+        return create(at.hour, at.minute, label = "Sieste", sunrise = false, smartWakeMinutes = 0)
+    }
+
+    /** "Passer le prochain": the upcoming occurrence of a repeating alarm won't ring. */
+    suspend fun skipNext(alarm: AlarmEntity) {
+        if (!alarm.repeating) return
+        AlarmService.abortPending(context, alarm.id)
+        val upcoming = AlarmScheduler.nextTrigger(alarm.hour, alarm.minute, alarm.days)
+        scheduler.snapshot.markConsumed(alarm.id, upcoming.toInstant().toEpochMilli())
+        scheduler.schedule(alarm, settingsRepo.current())
+        onAlarmsChanged()
+    }
+
+    suspend fun unskip(alarm: AlarmEntity) {
+        scheduler.snapshot.markConsumed(alarm.id, 0L)
+        scheduler.schedule(alarm, settingsRepo.current())
+        onAlarmsChanged()
+    }
 
     /**
      * An occurrence has been consumed: it rang (possibly early, through smart wake) or was dismissed

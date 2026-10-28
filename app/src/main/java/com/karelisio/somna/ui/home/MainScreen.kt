@@ -69,6 +69,8 @@ fun MainScreen(
     val haptics = rememberHaptics()
     var tab by rememberSaveable { mutableIntStateOf(0) }
     var sleepNowRequest by remember { mutableIntStateOf(0) }
+    var napRequest by remember { mutableIntStateOf(0) }
+    var newAlarmRequest by remember { mutableIntStateOf(0) }
     val pendingDestination by destination.collectAsStateWithLifecycle()
     LaunchedEffect(pendingDestination) {
         when (pendingDestination) {
@@ -79,7 +81,18 @@ fun MainScreen(
                 tab = Tab.CALCULATOR.ordinal
                 sleepNowRequest++
             }
-            MainActivity.DEST_UPDATE -> somna.forceShowUpdate = true
+            MainActivity.DEST_NAP -> {
+                tab = Tab.CALCULATOR.ordinal
+                napRequest++
+            }
+            MainActivity.DEST_NEW_ALARM -> {
+                tab = Tab.ALARMS.ordinal
+                newAlarmRequest++
+            }
+            MainActivity.DEST_UPDATE -> {
+                somna.updateSheetDismissed = false
+                somna.forceShowUpdate = true
+            }
         }
         destination.value = null
     }
@@ -124,11 +137,16 @@ fun MainScreen(
                         Tab.CALCULATOR -> CalculatorScreen(
                             contentPadding = contentPadding,
                             sleepNowRequest = sleepNowRequest,
+                            napRequest = napRequest,
                             onOpenSettings = onOpenSettings,
                             onOpenPermissions = onOpenPermissions,
                             onShowAlarms = { tab = Tab.ALARMS.ordinal },
                         )
-                        Tab.ALARMS -> AlarmsScreen(contentPadding, onOpenAlarm, onOpenSettings, onGoToCalculator = { tab = Tab.CALCULATOR.ordinal })
+                        Tab.ALARMS -> AlarmsScreen(
+                            contentPadding, onOpenAlarm, onOpenSettings,
+                            onGoToCalculator = { tab = Tab.CALCULATOR.ordinal },
+                            newAlarmRequest = newAlarmRequest,
+                        )
                         Tab.SOUNDS -> SoundsScreen(contentPadding, onOpenSettings)
                         Tab.JOURNAL -> JournalScreen(contentPadding, onOpenSettings)
                     }

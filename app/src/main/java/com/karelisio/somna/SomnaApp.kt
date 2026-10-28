@@ -1,6 +1,10 @@
 package com.karelisio.somna
 
 import android.app.Application
+import android.content.Intent
+import androidx.core.content.pm.ShortcutInfoCompat
+import androidx.core.content.pm.ShortcutManagerCompat
+import androidx.core.graphics.drawable.IconCompat
 import androidx.core.os.UserManagerCompat
 import com.karelisio.somna.alarm.Notifications
 import com.karelisio.somna.update.UpdateWorker
@@ -34,6 +38,7 @@ class SomnaApp : Application() {
     fun onUnlocked() {
         if (!UserManagerCompat.isUserUnlocked(this) || !started.compareAndSet(false, true)) return
         if (!BuildConfig.DEBUG) UpdateWorker.schedule(this)
+        publishShortcuts()
         val settings = container.settings.settings
         container.appScope.launch {
             // Alarm specs embed some settings (crescendo, volume, snooze…): re-arm when they change.
@@ -52,6 +57,32 @@ class SomnaApp : Application() {
         container.appScope.launch {
             WidgetTicker.schedule(this@SomnaApp)
             runCatching { container.bedtime.recompute() }
+        }
+    }
+
+    /** Long-press shortcuts on the launcher icon. */
+    private fun publishShortcuts() {
+        fun shortcut(id: String, short: String, long: String, icon: Int, destination: String) =
+            ShortcutInfoCompat.Builder(this, id)
+                .setShortLabel(short)
+                .setLongLabel(long)
+                .setIcon(IconCompat.createWithResource(this, icon))
+                .setIntent(
+                    Intent(this, MainActivity::class.java)
+                        .setAction(Intent.ACTION_VIEW)
+                        .putExtra(MainActivity.EXTRA_DESTINATION, destination)
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP),
+                )
+                .build()
+        runCatching {
+            ShortcutManagerCompat.setDynamicShortcuts(
+                this,
+                listOf(
+                    shortcut("sleep_now", "Je me couche", "Je me couche maintenant", R.mipmap.ic_shortcut_bedtime, MainActivity.DEST_SLEEP_NOW),
+                    shortcut("nap", "Sieste 20 min", "Sieste de 20 minutes", R.mipmap.ic_shortcut_nap, MainActivity.DEST_NAP),
+                    shortcut("new_alarm", "Nouveau réveil", "Nouveau réveil", R.mipmap.ic_shortcut_alarm, MainActivity.DEST_NEW_ALARM),
+                ),
+            )
         }
     }
 }

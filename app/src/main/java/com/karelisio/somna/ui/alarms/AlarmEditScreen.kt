@@ -38,6 +38,7 @@ import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.NotificationsActive
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Sensors
+import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.material.icons.rounded.Vibration
 import androidx.compose.material.icons.rounded.Waves
@@ -135,8 +136,27 @@ fun AlarmEditScreen(alarmId: Int, onBack: () -> Unit) {
                 .padding(padding)
                 .verticalScroll(rememberScrollState()),
         ) {
-            TimeHeader(a, onEdit = { showPicker = true })
+            val revision = vm.revision
+            TimeHeader(a, nextAt = { now -> vm.effectiveNext(a, now) }, revision = revision, onEdit = { showPicker = true })
             DaySelector(a.days, onChange = { days -> vm.update { it.copy(days = days, enabled = true) } })
+            if (a.repeating && a.enabled) {
+                val skipped = remember(a, revision) { vm.isSkipped(a) }
+                val upcoming = remember(a, revision) { nextTrigger(a, ZonedDateTime.now()) }
+                SettingsGroup(
+                    modifier = Modifier.padding(top = 12.dp),
+                    items = listOf(
+                        {
+                            SettingsSwitch(
+                                title = "Passer le prochain réveil",
+                                subtitle = "${TimeFormat.relativeDay(upcoming.toLocalDate())} à %02d:%02d ne sonnera pas, la suite continue normalement".format(a.hour, a.minute),
+                                icon = Icons.Rounded.SkipNext,
+                                checked = skipped,
+                                onCheckedChange = { vm.toggleSkip() },
+                            )
+                        },
+                    ),
+                )
+            }
             var label by remember(a.id) { mutableStateOf(a.label) }
             OutlinedTextField(
                 value = label,
@@ -243,9 +263,9 @@ fun AlarmEditScreen(alarmId: Int, onBack: () -> Unit) {
 }
 
 @Composable
-private fun TimeHeader(alarm: AlarmEntity, onEdit: () -> Unit) {
+private fun TimeHeader(alarm: AlarmEntity, nextAt: (ZonedDateTime) -> ZonedDateTime, revision: Int, onEdit: () -> Unit) {
     var now by remember { mutableStateOf(ZonedDateTime.now()) }
-    LaunchedEffect(alarm) { now = ZonedDateTime.now() }
+    LaunchedEffect(alarm, revision) { now = ZonedDateTime.now() }
     SpringCard(
         onClick = onEdit,
         shape = MaterialTheme.shapes.extraLarge,
@@ -260,7 +280,7 @@ private fun TimeHeader(alarm: AlarmEntity, onEdit: () -> Unit) {
                 style = ClockStyle.copy(fontSize = 96.sp, lineHeight = 100.sp),
                 modifier = Modifier.sharedItem("alarm-time-${alarm.id}"),
             )
-            val next = nextTrigger(alarm, now)
+            val next = nextAt(now)
             val minutes = Duration.between(now, next).toMinutes() + 1
             Text(
                 if (alarm.enabled) "Sonne ${TimeFormat.relativeDay(next.toLocalDate()).lowercase()} · dans ${TimeFormat.durationMinutes(minutes)}"

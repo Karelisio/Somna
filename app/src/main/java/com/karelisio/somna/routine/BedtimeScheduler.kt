@@ -35,7 +35,7 @@ class BedtimeScheduler(
         if (!s.bedtimeReminder) return
         val now = ZonedDateTime.now()
         val wake = alarmDao.all().filter { it.enabled }
-            .map { AlarmScheduler.nextTrigger(it.hour, it.minute, it.days, now) }
+            .map { scheduler.effectiveNext(it, now) }
             .minOrNull() ?: return
         if (Duration.between(now, wake).toHours() > 36) return
         val wakeMs = wake.toInstant().toEpochMilli()

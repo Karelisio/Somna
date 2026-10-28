@@ -2,6 +2,15 @@
 
 Les notes d'une version sont reprises telles quelles dans la GitHub Release et affichées dans l'appli.
 
+## 1.1.0
+
+- **Sieste** : 20 min, 30 min ou un cycle complet en un tap depuis le calculateur.
+- **Passer le prochain réveil** d'un réveil récurrent (jour férié, congé), sans le désactiver ; « Rétablir » pour annuler.
+- **Raccourcis** : appui long sur l'icône (Je me couche, Sieste 20 min, Nouveau réveil) et tuile « Je me couche » dans les réglages rapides.
+- **Widget** : affiche aussi le prochain réveil.
+- **Aperçu du volume** : un court extrait au volume réel du réveil quand on règle le volume ou le son.
+- **Export du journal** en CSV via le menu de partage.
+
 ## 1.0.2
 
 - **Mise à jour intégrée** : la fenêtre d'installation s'ouvre aussi depuis Réglages › « Rechercher une mise à jour », et un bouton « Mettre à jour » y reste tant qu'une version est disponible.

@@ -34,6 +34,7 @@ import androidx.glance.layout.Column
 import androidx.glance.layout.Row
 import androidx.glance.layout.Spacer
 import androidx.glance.layout.fillMaxSize
+import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
 import androidx.glance.layout.padding
 import androidx.glance.layout.size
@@ -63,15 +64,17 @@ class SomnaWidget : GlanceAppWidget() {
         val settings = runCatching { context.container.settings.current() }.getOrDefault(SomnaSettings())
         val options = SleepCalculator.wakeTimesFor(LocalDateTime.now(), settings.cycleMinutes, settings.fallAsleepMinutes, 5..6)
         val dynamic = settings.dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+        val next = runCatching { context.container.alarms.next() }.getOrNull()?.second
+        val nextText = next?.let { "⏰ ${TimeFormat.relativeDay(it.toLocalDate())} ${TimeFormat.clock(it.toLocalTime())}" }
         provideContent {
             GlanceTheme(colors = if (dynamic) GlanceTheme.colors else FallbackColors) {
-                WidgetContent(options)
+                WidgetContent(options, nextText)
             }
         }
     }
 
     @Composable
-    private fun WidgetContent(options: List<SleepOption>) {
+    private fun WidgetContent(options: List<SleepOption>, nextAlarm: String?) {
         val size = LocalSize.current
         val compact = size.width < MEDIUM.width
         val colors = GlanceTheme.colors
@@ -85,7 +88,7 @@ class SomnaWidget : GlanceAppWidget() {
                 .clickable(actionStartActivity<MainActivity>(actionParametersOf(destinationKey to MainActivity.DEST_SLEEP_NOW))),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(modifier = GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Image(
                     provider = ImageProvider(R.drawable.ic_notification),
                     contentDescription = null,
@@ -97,7 +100,15 @@ class SomnaWidget : GlanceAppWidget() {
                     text = if (compact) "Couché maintenant" else "Si tu te couches maintenant",
                     style = TextStyle(color = colors.onSurfaceVariant, fontSize = 13.sp, fontWeight = FontWeight.Medium),
                     maxLines = 1,
+                    modifier = GlanceModifier.defaultWeight(),
                 )
+                if (nextAlarm != null && !compact) {
+                    Text(
+                        text = nextAlarm,
+                        style = TextStyle(color = colors.primary, fontSize = 12.sp, fontWeight = FontWeight.Medium),
+                        maxLines = 1,
+                    )
+                }
             }
             Spacer(GlanceModifier.height(6.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -125,7 +136,7 @@ class SomnaWidget : GlanceAppWidget() {
             if (size.height >= LARGE.height) {
                 Spacer(GlanceModifier.height(4.dp))
                 Text(
-                    "Touchez une heure pour régler le réveil",
+                    if (nextAlarm != null && compact) "Prochain réveil : ${nextAlarm.removePrefix("⏰ ")}" else "Touchez une heure pour régler le réveil",
                     style = TextStyle(color = colors.onSurfaceVariant, fontSize = 12.sp),
                     maxLines = 1,
                 )

@@ -85,13 +85,22 @@ class AlarmScheduler(private val context: Context) {
             snapshot.remove(alarm.id)
             return
         }
-        var trigger = nextTrigger(alarm.hour, alarm.minute, alarm.days, after)
-        // Already consumed early (smart wake, "je suis réveillé"): never ring that occurrence again.
-        if (alarm.repeating && trigger.toInstant().toEpochMilli() == snapshot.consumedAt(alarm.id)) {
-            trigger = nextTrigger(alarm.hour, alarm.minute, alarm.days, trigger)
-        }
+        val trigger = effectiveNext(alarm, after)
         scheduleSpec(buildSpec(alarm, settings, trigger.toInstant().toEpochMilli()))
     }
+
+    /**
+     * Next time [alarm] will really ring: an occurrence already consumed early (smart wake,
+     * "je suis réveillé") or skipped by the user ("passer le prochain") is never rung again.
+     */
+    fun effectiveNext(alarm: AlarmEntity, after: ZonedDateTime = ZonedDateTime.now()): ZonedDateTime {
+        val trigger = nextTrigger(alarm.hour, alarm.minute, alarm.days, after)
+        return if (isSkipped(alarm, trigger)) nextTrigger(alarm.hour, alarm.minute, alarm.days, trigger) else trigger
+    }
+
+    /** True when the upcoming occurrence of a repeating alarm has been skipped. */
+    fun isSkipped(alarm: AlarmEntity, upcoming: ZonedDateTime = nextTrigger(alarm.hour, alarm.minute, alarm.days)): Boolean =
+        alarm.repeating && upcoming.toInstant().toEpochMilli() == snapshot.consumedAt(alarm.id)
 
     fun scheduleSpec(spec: AlarmSpec) {
         setAlarmClock(spec.triggerAt, pending(KIND_RING, spec))

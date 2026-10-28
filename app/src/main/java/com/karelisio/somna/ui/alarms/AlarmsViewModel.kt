@@ -1,5 +1,8 @@
 package com.karelisio.somna.ui.alarms
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.karelisio.somna.AppContainer
@@ -34,6 +37,18 @@ class AlarmsViewModel(private val container: AppContainer) : ViewModel() {
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ZonedDateTime.now())
 
+    /** Bumped when a skip changes (it lives outside the database), to recompute next times. */
+    var revision by mutableIntStateOf(0)
+        private set
+
+    fun effectiveNext(alarm: AlarmEntity, now: ZonedDateTime): ZonedDateTime = container.scheduler.effectiveNext(alarm, now)
+    fun isSkipped(alarm: AlarmEntity): Boolean = container.scheduler.isSkipped(alarm)
+
+    fun toggleSkip(alarm: AlarmEntity) = viewModelScope.launch {
+        if (isSkipped(alarm)) container.alarms.unskip(alarm) else container.alarms.skipNext(alarm)
+        revision++
+    }
+
     fun setEnabled(alarm: AlarmEntity, enabled: Boolean) = viewModelScope.launch { container.alarms.setEnabled(alarm, enabled) }
     fun delete(alarm: AlarmEntity) = viewModelScope.launch { container.alarms.delete(alarm) }
     fun restore(alarm: AlarmEntity) = viewModelScope.launch { container.alarms.restore(alarm) }
@@ -46,6 +61,18 @@ class AlarmEditViewModel(private val container: AppContainer, val alarmId: Int) 
 
     val settings: StateFlow<SomnaSettings> =
         container.settings.settings.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SomnaSettings())
+
+    var revision by mutableIntStateOf(0)
+        private set
+
+    fun effectiveNext(alarm: AlarmEntity, now: ZonedDateTime): ZonedDateTime = container.scheduler.effectiveNext(alarm, now)
+    fun isSkipped(alarm: AlarmEntity): Boolean = container.scheduler.isSkipped(alarm)
+
+    fun toggleSkip() = viewModelScope.launch {
+        val current = alarm.value ?: return@launch
+        if (isSkipped(current)) container.alarms.unskip(current) else container.alarms.skipNext(current)
+        revision++
+    }
 
     private var saveJob: Job? = null
     /** Latest edit not yet reflected by the database flow, so quick successive edits all apply. */

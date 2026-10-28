@@ -54,6 +54,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -67,6 +68,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.karelisio.somna.BuildConfig
+import com.karelisio.somna.alarm.AlarmPreview
 import com.karelisio.somna.alarm.AlarmService
 import com.karelisio.somna.alarm.AlarmSpec
 import com.karelisio.somna.audio.SoundType
@@ -99,6 +101,8 @@ fun SettingsScreen(onBack: () -> Unit, onOpenPermissions: () -> Unit, onOpenBatt
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
     val haptics = rememberHaptics()
     val scope = rememberCoroutineScope()
+
+    DisposableEffect(Unit) { onDispose { AlarmPreview.stop(context) } }
 
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -172,7 +176,12 @@ fun SettingsScreen(onBack: () -> Unit, onOpenPermissions: () -> Unit, onOpenBatt
             SectionTitle("Réveil")
             SettingsGroup(
                 items = listOf(
-                    { SoundChoice(s.defaultSound) { v -> somna.edit { setDefaultSound(v) } } },
+                    {
+                        SoundChoice(s.defaultSound) { v ->
+                            somna.edit { setDefaultSound(v) }
+                            AlarmPreview.play(context, v, s.alarmVolume, scope)
+                        }
+                    },
                     {
                         SettingsSwitch(
                             title = "Lever de soleil",
@@ -213,11 +222,14 @@ fun SettingsScreen(onBack: () -> Unit, onOpenPermissions: () -> Unit, onOpenBatt
                         var v by remember(s.alarmVolume) { mutableFloatStateOf(s.alarmVolume) }
                         SettingsSlider(
                             title = "Volume du réveil",
-                            subtitle = "Même en mode silencieux (flux Alarme)",
+                            subtitle = "Même en mode silencieux (flux Alarme) · aperçu au relâchement",
                             icon = Icons.Rounded.VolumeUp,
                             value = v,
                             onValueChange = { v = it },
-                            onValueChangeFinished = { somna.edit { setAlarmVolume(v) } },
+                            onValueChangeFinished = {
+                                somna.edit { setAlarmVolume(v) }
+                                AlarmPreview.play(context, s.defaultSound, v, scope)
+                            },
                             valueRange = 0.1f..1f,
                             steps = 0,
                             label = { "${(it * 100).roundToInt()} %" },

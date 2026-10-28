@@ -28,6 +28,7 @@ import androidx.compose.material.icons.rounded.AlarmAdd
 import androidx.compose.material.icons.rounded.Bedtime
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.Hotel
 import androidx.compose.material.icons.rounded.Remove
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Settings
@@ -92,6 +93,7 @@ fun CalculatorScreen(
     onOpenSettings: () -> Unit,
     onOpenPermissions: () -> Unit,
     onShowAlarms: () -> Unit,
+    napRequest: Int = 0,
 ) {
     val container = LocalContext.current.container
     val vm = viewModel { CalculatorViewModel(container) }
@@ -104,6 +106,19 @@ fun CalculatorScreen(
 
     LaunchedEffect(sleepNowRequest) {
         if (sleepNowRequest > 0) vm.mode = CalcMode.SLEEP_NOW
+    }
+
+    fun nap(minutes: Int) {
+        haptics.confirm()
+        scope.launch {
+            val created = vm.createNap(minutes)
+            snackbar.currentSnackbarData?.dismiss()
+            val result = snackbar.showSnackbar(created.message, actionLabel = "Annuler")
+            if (result == SnackbarResult.ActionPerformed) vm.undo(created)
+        }
+    }
+    LaunchedEffect(napRequest) {
+        if (napRequest > 0) nap(20)
     }
 
     val options = remember(vm.mode, now, vm.wakeTarget, settings.cycleMinutes, settings.fallAsleepMinutes) {
@@ -197,18 +212,16 @@ fun CalculatorScreen(
         item(key = "night") {
             NightPreview(focused, vm.mode, now, settings.fallAsleepMinutes, Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
         }
+        item(key = "nap") {
+            NapCard(now, settings.fallAsleepMinutes, settings.cycleMinutes, onNap = ::nap, modifier = Modifier.padding(horizontal = 16.dp))
+        }
         item(key = "footer") {
-            Row(
-                Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
+            Box(Modifier.fillMaxWidth().padding(horizontal = 16.dp), contentAlignment = Alignment.Center) {
                 TextButton(onClick = onOpenSettings) {
                     Icon(Icons.Rounded.Tune, null, Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text("Cycles de ${settings.cycleMinutes} min · endormissement ${settings.fallAsleepMinutes} min")
+                    Text("Cycles de ${settings.cycleMinutes} min · endormissement ${settings.fallAsleepMinutes} min", maxLines = 1)
                 }
-                TextButton(onClick = onShowAlarms) { Text("Mes réveils") }
             }
         }
     }
@@ -441,6 +454,45 @@ fun PermissionReminder(onOpen: () -> Unit) {
                 }
                 IconButton(onClick = { somna.edit { setPermissionReminderDismissedAt(System.currentTimeMillis()) } }) {
                     Icon(Icons.Rounded.Close, "Me le rappeler plus tard")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun NapCard(now: LocalDateTime, fallAsleep: Int, cycle: Int, onNap: (Int) -> Unit, modifier: Modifier = Modifier) {
+    Surface(shape = MaterialTheme.shapes.extraLarge, color = MaterialTheme.colorScheme.surfaceContainerLow, modifier = modifier.fillMaxWidth()) {
+        Column(Modifier.padding(20.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Rounded.Hotel, null, tint = MaterialTheme.colorScheme.primary)
+                Spacer(Modifier.width(10.dp))
+                Text("Sieste", style = MaterialTheme.typography.titleLarge)
+            }
+            Text(
+                "Réveil avant le sommeil profond, ou après un cycle complet (endormissement inclus)",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(14.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf(20 to "Flash", 30 to "Récup", cycle to "1 cycle").forEach { (minutes, label) ->
+                    val wake = now.plusMinutes((fallAsleep + minutes).toLong() + 1)
+                    SpringCard(
+                        onClick = { onNap(minutes) },
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                        shape = MaterialTheme.shapes.large,
+                        haptic = false,
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Column(Modifier.padding(horizontal = 12.dp, vertical = 14.dp)) {
+                            Text("$minutes min", style = MaterialTheme.typography.titleMedium)
+                            Text(label, style = MaterialTheme.typography.labelMedium)
+                            Spacer(Modifier.height(6.dp))
+                            Text("→ ${TimeFormat.clock(wake)}", style = MaterialTheme.typography.titleSmall)
+                        }
+                    }
                 }
             }
         }

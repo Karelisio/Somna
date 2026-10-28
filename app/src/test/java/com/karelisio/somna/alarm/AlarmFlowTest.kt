@@ -113,6 +113,33 @@ class AlarmFlowTest {
     }
 
     @Test
+    fun `skipping the next occurrence arms the following one, and can be undone`() = runBlocking {
+        val alarm = app.container.alarms.create(7, 0, days = com.karelisio.somna.data.AlarmEntity.EVERY_DAY)
+        val upcoming = AlarmScheduler.nextTrigger(7, 0, alarm.days)
+        app.container.alarms.skipNext(alarm)
+        assertTrue(app.container.scheduler.isSkipped(alarm))
+        val following = AlarmScheduler.nextTrigger(7, 0, alarm.days, upcoming).toInstant().toEpochMilli()
+        assertEquals(following, app.container.scheduler.snapshot.specs().first { it.alarmId == alarm.id }.triggerAt)
+        assertEquals(following, app.container.scheduler.effectiveNext(alarm).toInstant().toEpochMilli())
+
+        app.container.alarms.unskip(alarm)
+        assertTrue(!app.container.scheduler.isSkipped(alarm))
+        assertEquals(upcoming.toInstant().toEpochMilli(), app.container.scheduler.snapshot.specs().first { it.alarmId == alarm.id }.triggerAt)
+    }
+
+    @Test
+    fun `a nap is a one-shot alarm without sunrise nor smart wake`() = runBlocking {
+        val before = java.time.LocalDateTime.now()
+        val nap = app.container.alarms.createNap(20)
+        assertEquals("Sieste", nap.label)
+        assertTrue(!nap.sunrise && nap.smartWakeMinutes == 0 && !nap.repeating)
+        val expected = before.plusMinutes(14L + 20 + 1)
+        val minutes = nap.hour * 60 + nap.minute
+        val diff = Math.floorMod(minutes - (expected.hour * 60 + expected.minute), 1440)
+        assertTrue("nap at ${nap.hour}:${nap.minute}, expected ≈ $expected", diff <= 1)
+    }
+
+    @Test
     fun `creating an alarm schedules an alarm clock plus the sunrise`() = runBlocking {
         val alarm = app.container.alarms.create(6, 50)
         val scheduled = shadowOf(app.getSystemService(AlarmManager::class.java)).scheduledAlarms

@@ -110,5 +110,7 @@ class MainActivity : ComponentActivity() {
         const val DEST_JOURNAL = "journal"
         const val DEST_SLEEP_NOW = "sleep_now"
         const val DEST_UPDATE = "update"
+        const val DEST_NAP = "nap"
+        const val DEST_NEW_ALARM = "new_alarm"
     }
 }

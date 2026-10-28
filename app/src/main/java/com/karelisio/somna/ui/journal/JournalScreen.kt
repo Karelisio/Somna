@@ -17,6 +17,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Bedtime
+import androidx.compose.material.icons.rounded.IosShare
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.WbSunny
 import androidx.compose.material3.CircularWavyProgressIndicator
@@ -47,6 +48,7 @@ import com.karelisio.somna.container
 import com.karelisio.somna.core.TimeFormat
 import com.karelisio.somna.core.toLocalDateTime
 import com.karelisio.somna.data.SleepEntry
+import com.karelisio.somna.data.SleepExport
 import com.karelisio.somna.data.SleepStats
 import com.karelisio.somna.ui.components.AnimatedCounter
 import com.karelisio.somna.ui.components.ConnectedChoice
@@ -63,7 +65,8 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun JournalScreen(contentPadding: PaddingValues, onOpenSettings: () -> Unit) {
-    val container = LocalContext.current.container
+    val context = LocalContext.current
+    val container = context.container
     val vm = viewModel { JournalViewModel(container) }
     val entries by vm.entries.collectAsStateWithLifecycle()
     val stats by vm.stats.collectAsStateWithLifecycle()
@@ -92,6 +95,12 @@ fun JournalScreen(contentPadding: PaddingValues, onOpenSettings: () -> Unit) {
                         },
                         shapes = IconButtonDefaults.shapes(),
                     ) { Icon(Icons.Rounded.Add, "Ajouter une nuit") }
+                    if (list.isNotEmpty()) {
+                        IconButton(onClick = {
+                            haptics.click()
+                            runCatching { context.startActivity(SleepExport.shareIntent(context, list)) }
+                        }) { Icon(Icons.Rounded.IosShare, "Exporter le journal (CSV)") }
+                    }
                     IconButton(onClick = onOpenSettings) { Icon(Icons.Rounded.Settings, "Réglages") }
                 },
             )

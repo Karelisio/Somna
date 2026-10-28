@@ -8,13 +8,14 @@ Package : `com.karelisio.somna` · minSdk 26 · targetSdk 37
 
 | | |
 |---|---|
-| **Calculateur** | « Je veux me lever à… » → heures de coucher ; « Je me couche maintenant » → heures de réveil. Cycles de 90 min (80–110), endormissement de 14 min (réglable), 4 à 6 cycles avec 5–6 mis en avant. Un tap crée le réveil. |
+| **Calculateur** | « Je veux me lever à… » → heures de coucher ; « Je me couche maintenant » → heures de réveil. Cycles de 90 min (80–110), endormissement de 14 min (réglable), 4 à 6 cycles avec 5–6 mis en avant. Un tap crée le réveil. Sieste 20 / 30 min / 1 cycle. |
+| **Raccourcis** | Appui long sur l'icône (Je me couche, Sieste, Nouveau réveil), tuile « Je me couche » des réglages rapides, « passer le prochain » pour les réveils récurrents. |
 | **Réveil fiable** | `AlarmManager.setAlarmClock`, notification plein écran (`USE_FULL_SCREEN_INTENT`), `USAGE_ALARM` (audio + `VibrationAttributes`) pour sonner en silencieux, ré-armement après redémarrage **même avant le déverrouillage** (Direct Boot), changement d'heure, mise à jour. |
 | **Réveil progressif** | Écran « lever de soleil » de 0 à 100 % de luminosité (10 min par défaut), sons doux synthétisés en direct (oiseaux, carillon, vagues) en crescendo, vibration progressive. |
 | **Réveil intelligent** | Fenêtre de 20 à 30 min : service au premier plan + accéléromètre (téléphone posé sur le matelas), sonne dès qu'un sommeil léger est détecté. |
 | **Snooze & missions** | Snooze réglable, mission anti-snooze (2 calculs ou puzzle 1→9). |
-| **Routine** | Rappel « va te coucher » à l'heure idéale, sons d'endormissement (pluie, bruit blanc, feu, vagues) avec minuterie et fondu, journal (coucher, lever, note 😴→😄) et statistiques 7/30 jours (durée moyenne, régularité). Room + DataStore. |
-| **Widget** | Glance, couleurs dynamiques : « Si tu te couches maintenant → réveil à 6h50 · 8h20 » (toucher une heure règle le réveil). |
+| **Routine** | Rappel « va te coucher » à l'heure idéale, sons d'endormissement (pluie, bruit blanc, feu, vagues) avec minuterie et fondu, journal (coucher, lever, note 😴→😄), statistiques 7/30 jours (durée moyenne, régularité) et export CSV. Room + DataStore. |
+| **Widget** | Glance, couleurs dynamiques : « Si tu te couches maintenant → réveil à 6h50 · 8h20 » (toucher une heure règle le réveil) et prochain réveil. |
 | **Mises à jour** | Vérification de `releases/latest` au lancement et via WorkManager (6 h max), bottom sheet avec changelog, téléchargement avec barre ondulée, installation via `PackageInstaller`, « ignorer cette version ». |
 | **Onboarding** | Pager animé, une autorisation par page, retour automatique depuis les réglages système, coche verte animée, rappel discret des autorisations passées. |
 

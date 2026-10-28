@@ -87,6 +87,12 @@ class CalculatorViewModel(private val container: AppContainer) : ViewModel() {
         }
     }
 
+    /** Nap: 20–30 min power nap, or one full cycle. */
+    suspend fun createNap(minutes: Int): CreatedAlarm {
+        val alarm = container.alarms.createNap(minutes)
+        return CreatedAlarm(alarm, existed = false, message = "Sieste de $minutes min · réveil à %02d:%02d 😴".format(alarm.hour, alarm.minute))
+    }
+
     fun undo(created: CreatedAlarm) {
         viewModelScope.launch {
             if (!created.existed) container.alarms.delete(created.alarm)

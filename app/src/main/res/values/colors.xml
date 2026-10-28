@@ -2,4 +2,6 @@
 <resources>
     <color name="night_blue">#0B1230</color>
     <color name="night_surface">#0B1022</color>
+    <color name="shortcut_background">#DEE0FF</color>
+    <color name="shortcut_glyph">#2E3C91</color>
 </resources>
