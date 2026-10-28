@@ -207,9 +207,15 @@ private class FireGenerator(private val rng: Rng) : SoundGenerator {
     private val breath = Drift(rng, SR, 0.7f, 1.2f, 1f, 3f, 0.5f)
 
     private val crackleEnv = FloatArray(CRACKLES)
+    private val cracklePeak = FloatArray(CRACKLES)
+    private val crackleAttack = IntArray(CRACKLES)
     private val crackleDecay = FloatArray(CRACKLES)
     private val crackleLife = IntArray(CRACKLES)
     private var lastWhite = 0f
+    // Crackles are band-limited (no harsh top end) to sound like distant wood, not clicks.
+    private val crackleLow = OnePole(lowpassCoef(2_200f, SR))
+    private val crackleBody = OnePole(lowpassCoef(2_200f, SR))
+    private val popSmooth = OnePole(lowpassCoef(900f, SR))
     private var nextCrackle = 1
     private var clusterLeft = 0
     private var nextCluster = SR
@@ -223,17 +229,17 @@ private class FireGenerator(private val rng: Rng) : SoundGenerator {
     override fun render(buffer: FloatArray, count: Int) {
         for (i in 0 until count) {
             if (--nextCluster <= 0) {
-                clusterLeft = (rng.range(0.05f, 0.5f) * SR).toInt()
-                nextCluster = rng.poissonInterval(1.2f, SR)
+                clusterLeft = (rng.range(0.05f, 0.3f) * SR).toInt()
+                nextCluster = rng.poissonInterval(0.4f, SR)
             }
             val inCluster = clusterLeft-- > 0
             if (--nextCrackle <= 0) {
                 spawnCrackle(inCluster)
-                nextCrackle = rng.poissonInterval(if (inCluster) rng.range(40f, 120f) else 4f, SR)
+                nextCrackle = rng.poissonInterval(if (inCluster) rng.range(10f, 25f) else 1.5f, SR)
             }
             if (--nextPop <= 0) {
                 spawnPop()
-                nextPop = rng.poissonInterval(0.25f, SR)
+                nextPop = rng.poissonInterval(0.12f, SR)
             }
 
             val f = flicker.next()
@@ -242,14 +248,20 @@ private class FireGenerator(private val rng: Rng) : SoundGenerator {
             val whoosh = (whooshHigh.process(p) - whooshLow.process(p)) * 0.8f * f
 
             val white = rng.bipolar()
-            val hp = (white - lastWhite) * 0.5f
+            val hp = crackleBody.process(crackleLow.process((white - lastWhite) * 0.5f)) * 3f
             lastWhite = white
             var crackles = 0f
             for (c in 0 until CRACKLES) {
                 if (crackleLife[c] <= 0) continue
                 crackleLife[c]--
+                // Short linear attack, then exponential decay: a soft "tick", never a click.
+                if (crackleAttack[c] > 0) {
+                    crackleAttack[c]--
+                    crackleEnv[c] = (crackleEnv[c] + cracklePeak[c] / ATTACK).coerceAtMost(cracklePeak[c])
+                } else {
+                    crackleEnv[c] *= crackleDecay[c]
+                }
                 crackles += hp * crackleEnv[c]
-                crackleEnv[c] *= crackleDecay[c]
             }
 
             var popOut = 0f
@@ -260,7 +272,7 @@ private class FireGenerator(private val rng: Rng) : SoundGenerator {
                     popBurst[k]--
                     popAmp[k] * (0.6f + 0.4f * rng.bipolar())
                 } else 0f
-                popOut += pops[k].process(excitation)
+                popOut += pops[k].process(popSmooth.process(excitation))
             }
             buffer[i] = softLimit(rumble * f + whoosh + crackles + popOut)
         }
@@ -269,18 +281,20 @@ private class FireGenerator(private val rng: Rng) : SoundGenerator {
     private fun spawnCrackle(inCluster: Boolean) {
         val slot = (0 until CRACKLES).firstOrNull { crackleLife[it] <= 0 } ?: return
         val u = rng.nextFloat()
-        crackleEnv[slot] = (if (inCluster) 0.08f else 0.05f) + 0.55f * u * u * u * u
-        val tau = rng.range(0.0002f, 0.0012f)
+        cracklePeak[slot] = (if (inCluster) 0.025f else 0.015f) + 0.07f * u * u * u * u
+        crackleEnv[slot] = 0f
+        crackleAttack[slot] = ATTACK
+        val tau = rng.range(0.002f, 0.006f)
         crackleDecay[slot] = exp(-1f / (tau * SR))
-        crackleLife[slot] = (tau * SR * 6f).toInt() + 2
+        crackleLife[slot] = ATTACK + (tau * SR * 6f).toInt() + 2
     }
 
     private fun spawnPop() {
         val slot = (0 until POPS).firstOrNull { popLife[it] <= 0 } ?: return
         val decay = rng.range(0.01f, 0.04f)
         pops[slot].reset()
-        pops[slot].tune(rng.range(500f, 1_800f), decay, SR)
-        popAmp[slot] = rng.range(0.12f, 0.3f)
+        pops[slot].tune(rng.range(300f, 900f), decay, SR)
+        popAmp[slot] = rng.range(0.05f, 0.12f)
         popBurst[slot] = 2 + rng.nextInt(6)
         popLife[slot] = (decay * SR * 7f).toInt()
     }
@@ -288,6 +302,8 @@ private class FireGenerator(private val rng: Rng) : SoundGenerator {
     private companion object {
         const val CRACKLES = 10
         const val POPS = 3
+        /** ~1.5 ms attack at 32 kHz. */
+        const val ATTACK = 48
     }
 }
 

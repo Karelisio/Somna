@@ -2,6 +2,11 @@
 
 Les notes d'une version sont reprises telles quelles dans la GitHub Release et affichées dans l'appli.
 
+## 1.0.1
+
+- **Arrêt du réveil sans pic sonore** : le son est coupé net et le volume d'alarme du téléphone n'est restauré qu'une fois le silence revenu.
+- **Feu de cheminée plus doux** : crépitements feutrés, sans clics.
+
 ## 1.0.0
 
 - **Calculateur de cycles** : « Je veux me lever à… » et « Je me couche maintenant », 4 à 6 cycles, cycles et endormissement réglables.

@@ -6,6 +6,8 @@ import android.media.AudioFocusRequest
 import android.media.AudioManager
 import android.media.MediaPlayer
 import android.media.RingtoneManager
+import android.os.Handler
+import android.os.Looper
 import com.karelisio.somna.audio.SoundType
 import com.karelisio.somna.audio.SynthPlayer
 import com.karelisio.somna.data.SYSTEM_SOUND
@@ -69,9 +71,15 @@ class AlarmPlayer(private val context: Context, private val spec: AlarmSpec) {
         synth = null
         media?.runCatching { stop(); release() }
         media = null
-        focus?.let { runCatching { audio.abandonAudioFocusRequest(it) } }
-        restoreStreamVolume()
         AlarmRuntime.level = 0f
+        // Restoring a louder system alarm volume while the last buffer still plays made a loud
+        // spike: wait until the track is silent and released.
+        val focusRequest = focus
+        focus = null
+        Handler(Looper.getMainLooper()).postDelayed({
+            focusRequest?.let { runCatching { audio.abandonAudioFocusRequest(it) } }
+            restoreStreamVolume()
+        }, 400)
     }
 
     private fun startSound() {

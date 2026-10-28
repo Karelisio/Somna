@@ -9,7 +9,6 @@ import android.os.Process
 import android.util.Log
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.max
-import kotlin.math.min
 import kotlin.math.sqrt
 
 /**
@@ -25,6 +24,9 @@ class SynthPlayer(context: Context, val type: SoundType, private val usage: Int)
 
     @Volatile
     private var targetVolume = 1f
+
+    private val trackLock = Any()
+    private var track: AudioTrack? = null
 
     /** Smoothed RMS (0..1) of the last rendered buffer, after volume — handy for visualizers. */
     @Volatile
@@ -45,11 +47,15 @@ class SynthPlayer(context: Context, val type: SoundType, private val usage: Int)
         targetVolume = volume.coerceIn(0f, 1f)
     }
 
-    /** Returns immediately; the audio thread fades out (150 ms) and releases the track by itself. */
+    /**
+     * Returns immediately. The track is muted at once (the mixer ramps it, no click) and its
+     * buffered audio is dropped, so nothing keeps playing after the user stopped the sound.
+     */
     @Synchronized
     fun stop() {
         session?.set(false)
         session = null
+        synchronized(trackLock) { runCatching { track?.setVolume(0f) } }
     }
 
     private fun run(active: AtomicBoolean) {
@@ -78,6 +84,7 @@ class SynthPlayer(context: Context, val type: SoundType, private val usage: Int)
                 .setSessionId(audioManager?.generateAudioSessionId() ?: AudioManager.AUDIO_SESSION_ID_GENERATE)
             if (!alarm) builder.setPerformanceMode(AudioTrack.PERFORMANCE_MODE_POWER_SAVING)
             track = builder.build()
+            synchronized(trackLock) { this.track = track }
             if (track.state != AudioTrack.STATE_INITIALIZED) {
                 Log.w(TAG, "AudioTrack not initialized for $type")
                 return
@@ -103,20 +110,10 @@ class SynthPlayer(context: Context, val type: SoundType, private val usage: Int)
                 if (track.write(buffer, 0, CHUNK, AudioTrack.WRITE_BLOCKING) < 0) break
             }
 
-            // Linear fade-out to avoid a click.
-            val fadeTotal = (sampleRate * 0.15f).toInt()
-            var faded = 0
-            while (faded < fadeTotal) {
-                val n = min(CHUNK, fadeTotal - faded)
-                generator.render(buffer, n)
-                for (i in 0 until n) {
-                    buffer[i] *= gain * (1f - (faded + i).toFloat() / fadeTotal)
-                }
-                track.write(buffer, 0, n, AudioTrack.WRITE_BLOCKING)
-                faded += n
-            }
-            track.stop() // in streaming mode, plays what was written then stops
-            Thread.sleep(bufferBytes * 1_000L / (sampleRate * Float.SIZE_BYTES) + 30)
+            // Already muted by stop(): let the mixer's volume ramp finish, then drop the buffered tail.
+            Thread.sleep(20)
+            track.pause()
+            track.flush()
         } catch (e: InterruptedException) {
             Thread.currentThread().interrupt()
         } catch (t: Throwable) {
@@ -124,7 +121,10 @@ class SynthPlayer(context: Context, val type: SoundType, private val usage: Int)
         } finally {
             active.set(false)
             if (session == null || session === active) level = 0f
-            runCatching { track?.release() }
+            synchronized(trackLock) {
+                if (this.track === track) this.track = null
+                runCatching { track?.release() }
+            }
         }
     }
 
