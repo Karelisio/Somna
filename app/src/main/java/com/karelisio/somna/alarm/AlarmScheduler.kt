@@ -5,6 +5,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import androidx.core.app.NotificationManagerCompat
 import com.karelisio.somna.MainActivity
 import com.karelisio.somna.data.AlarmEntity
 import com.karelisio.somna.data.SomnaSettings
@@ -37,6 +38,10 @@ data class AlarmSpec(
     val volume: Float = 0.8f,
     val snoozeCount: Int = 0,
     val test: Boolean = false,
+    /** Rung before its time by the smart wake (light sleep detected). */
+    val early: Boolean = false,
+    /** Safety re-ring armed while ringing, in case the process gets killed. */
+    val backup: Boolean = false,
 ) {
     val repeating: Boolean get() = days != 0
 
@@ -80,7 +85,11 @@ class AlarmScheduler(private val context: Context) {
             snapshot.remove(alarm.id)
             return
         }
-        val trigger = nextTrigger(alarm.hour, alarm.minute, alarm.days, after)
+        var trigger = nextTrigger(alarm.hour, alarm.minute, alarm.days, after)
+        // Already consumed early (smart wake, "je suis réveillé"): never ring that occurrence again.
+        if (alarm.repeating && trigger.toInstant().toEpochMilli() == snapshot.consumedAt(alarm.id)) {
+            trigger = nextTrigger(alarm.hour, alarm.minute, alarm.days, trigger)
+        }
         scheduleSpec(buildSpec(alarm, settings, trigger.toInstant().toEpochMilli()))
     }
 
@@ -100,11 +109,32 @@ class AlarmScheduler(private val context: Context) {
 
     fun scheduleSnooze(spec: AlarmSpec): AlarmSpec {
         val at = System.currentTimeMillis() + spec.snoozeMinutes * 60_000L
-        val snoozed = spec.copy(triggerAt = at, sunriseMinutes = 0, smartMinutes = 0, snoozeCount = spec.snoozeCount + 1)
+        val snoozed = spec.copy(
+            triggerAt = at, sunriseMinutes = 0, smartMinutes = 0, snoozeCount = spec.snoozeCount + 1,
+            early = false, backup = false,
+        )
         setAlarmClock(at, pending(KIND_SNOOZE, snoozed))
         if (!spec.test) snapshot.putSnooze(snoozed)
         return snoozed
     }
+
+    /** Smart wake: ring now through an alarm clock, so the service is (re)started with the exact-alarm exemption. */
+    fun ringNow(spec: AlarmSpec) {
+        setAlarmClock(System.currentTimeMillis() + 1_000, pending(KIND_RING, spec.copy(early = true)))
+    }
+
+    /** Another alarm is ringing: deliver this one a bit later instead of losing it. */
+    fun requeue(spec: AlarmSpec, delayMs: Long = 60_000L) {
+        setAlarmClock(System.currentTimeMillis() + delayMs, pending(KIND_SNOOZE, spec.copy(triggerAt = System.currentTimeMillis() + delayMs)))
+    }
+
+    /** While ringing, keeps a re-ring armed shortly after now: if the process dies, the alarm comes back. */
+    fun armBackup(spec: AlarmSpec) {
+        val at = System.currentTimeMillis() + 90_000L
+        setAlarmClock(at, pending(KIND_BACKUP, spec.copy(backup = true)))
+    }
+
+    fun cancelBackup(alarmId: Int) = cancelKind(alarmId, KIND_BACKUP)
 
     /** Re-arms a pending snooze at its original time (after a reboot). */
     fun rearmSnooze(spec: AlarmSpec) {
@@ -119,6 +149,7 @@ class AlarmScheduler(private val context: Context) {
     fun cancelSnooze(alarmId: Int) {
         cancelKind(alarmId, KIND_SNOOZE)
         snapshot.removeSnooze(alarmId)
+        NotificationManagerCompat.from(context).cancel(Notifications.ID_SNOOZE_BASE + alarmId)
     }
 
     fun cancelSunriseAndSmart(alarmId: Int) {
@@ -175,31 +206,37 @@ class AlarmScheduler(private val context: Context) {
         const val ACTION_SUNRISE = "com.karelisio.somna.action.SUNRISE"
         const val ACTION_SMART = "com.karelisio.somna.action.SMART"
         const val ACTION_SNOOZE_RING = "com.karelisio.somna.action.SNOOZE_RING"
+        const val ACTION_BACKUP_RING = "com.karelisio.somna.action.BACKUP_RING"
 
         private const val KIND_RING = 0
         private const val KIND_SUNRISE = 1
         private const val KIND_SMART = 2
         private const val KIND_SNOOZE = 3
+        private const val KIND_BACKUP = 4
 
         private fun actionFor(kind: Int) = when (kind) {
             KIND_RING -> ACTION_RING
             KIND_SUNRISE -> ACTION_SUNRISE
             KIND_SMART -> ACTION_SMART
+            KIND_BACKUP -> ACTION_BACKUP_RING
             else -> ACTION_SNOOZE_RING
         }
 
-        private fun requestCode(alarmId: Int, kind: Int) = 1_000 + alarmId * 4 + kind
+        private fun requestCode(alarmId: Int, kind: Int) = 1_000 + alarmId * 8 + kind
 
-        /** Next time [hour]:[minute] strictly after [after], restricted to the repeat [days] when set. */
+        /**
+         * Next time [hour]:[minute] strictly after [after], restricted to the repeat [days] when set.
+         * Iterates on local dates so a daylight-saving gap on one day doesn't shift the following days.
+         */
         fun nextTrigger(hour: Int, minute: Int, days: Int, after: ZonedDateTime = ZonedDateTime.now()): ZonedDateTime {
-            var candidate = after.toLocalDate().atTime(hour, minute).atZone(after.zone)
-            if (!candidate.isAfter(after)) candidate = candidate.plusDays(1)
-            if (days == 0) return candidate
-            repeat(7) {
-                if (days and (1 shl (candidate.dayOfWeek.value - 1)) != 0) return candidate
-                candidate = candidate.plusDays(1)
+            val start = after.toLocalDate()
+            for (i in 0L..8L) {
+                val date = start.plusDays(i)
+                if (days != 0 && days and (1 shl (date.dayOfWeek.value - 1)) == 0) continue
+                val candidate = date.atTime(hour, minute).atZone(after.zone)
+                if (candidate.isAfter(after)) return candidate
             }
-            return candidate
+            return start.plusDays(1).atTime(hour, minute).atZone(after.zone)
         }
 
         fun zoned(epochMillis: Long): ZonedDateTime = Instant.ofEpochMilli(epochMillis).atZone(ZoneId.systemDefault())

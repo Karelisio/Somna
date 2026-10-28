@@ -4,9 +4,13 @@ import android.Manifest
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
+import com.karelisio.somna.R
+import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 
@@ -20,8 +24,12 @@ object Notifications {
     const val CH_SOUNDS = "sleep_sounds"
     const val CH_UPDATES = "updates"
 
-    const val ID_ALARM_SERVICE = 100
-    const val ID_SNOOZE_BASE = 200
+    const val ID_SMART = 100
+    const val ID_SUNRISE = 101
+    const val ID_RING = 102
+    const val ID_FALLBACK = 103
+    const val ID_INSTALL = 104
+    const val ID_SNOOZE_BASE = 10_000
     const val ID_BEDTIME = 300
     const val ID_SOUNDS = 400
     const val ID_UPDATE = 500
@@ -66,6 +74,29 @@ object Notifications {
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
         ) return
         runCatching { NotificationManagerCompat.from(context).notify(id, notification) }
+    }
+
+    /** Full-screen alarm notification used when the alarm service couldn't be started. */
+    fun postFallback(context: Context, spec: AlarmSpec) {
+        val open = PendingIntent.getActivity(
+            context, 8,
+            Intent(context, AlarmActivity::class.java)
+                .putExtra(AlarmScheduler.EXTRA_SPEC, spec.toJson())
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
+        val notification = NotificationCompat.Builder(context, CH_ALARM)
+            .setSmallIcon(R.drawable.ic_alarm_notification)
+            .setContentTitle(spec.label.ifBlank { "Réveil" })
+            .setContentText("C'est l'heure de se lever ☀️")
+            .setPriority(NotificationCompat.PRIORITY_MAX)
+            .setCategory(NotificationCompat.CATEGORY_ALARM)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setFullScreenIntent(open, true)
+            .setContentIntent(open)
+            .setAutoCancel(true)
+            .build()
+        post(context, ID_FALLBACK, notification)
     }
 
     fun canUseFullScreen(context: Context): Boolean =

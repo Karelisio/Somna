@@ -47,12 +47,13 @@ class BedtimeScheduler(
         _next.value = bedtime
     }
 
+    /** "Dans 15 min": its own PendingIntent, so a later [recompute] doesn't cancel it. */
     fun remindLater(minutes: Int, wakeAt: Long) {
-        scheduler.setExact(System.currentTimeMillis() + minutes * 60_000L, pending(BedtimeReceiver.ACTION_BEDTIME, wakeAt))
+        scheduler.setExact(System.currentTimeMillis() + minutes * 60_000L, pending(BedtimeReceiver.ACTION_BEDTIME, wakeAt, requestCode = 78))
     }
 
-    private fun pending(action: String, wakeAt: Long = 0L): PendingIntent = PendingIntent.getBroadcast(
-        context, 77,
+    private fun pending(action: String, wakeAt: Long = 0L, requestCode: Int = 77): PendingIntent = PendingIntent.getBroadcast(
+        context, requestCode,
         Intent(context, BedtimeReceiver::class.java).setAction(action).putExtra(BedtimeReceiver.EXTRA_WAKE, wakeAt),
         PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
     )

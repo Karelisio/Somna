@@ -20,6 +20,10 @@ class AlarmSnapshot(context: Context) {
     fun specs(): List<AlarmSpec> = prefs.all.filterKeys { it.startsWith(PREFIX) }.values.mapNotNull { AlarmSpec.fromJson(it as? String) }
     fun snoozes(): List<AlarmSpec> = prefs.all.filterKeys { it.startsWith(SNOOZE_PREFIX) }.values.mapNotNull { AlarmSpec.fromJson(it as? String) }
 
+    /** Trigger time of the last consumed occurrence of an alarm (rang, or skipped early). */
+    fun markConsumed(alarmId: Int, triggerAt: Long) = prefs.edit { putLong(consumedKey(alarmId), triggerAt) }
+    fun consumedAt(alarmId: Int): Long = prefs.getLong(consumedKey(alarmId), 0L)
+
     /** One-shot alarms that rang while the database was locked; disabled after unlock. */
     fun markOneShotFired(alarmId: Int) = prefs.edit {
         putStringSet(FIRED, (prefs.getStringSet(FIRED, emptySet()).orEmpty() + alarmId.toString()))
@@ -35,6 +39,7 @@ class AlarmSnapshot(context: Context) {
 
     private fun key(id: Int) = "$PREFIX$id"
     private fun snoozeKey(id: Int) = "$SNOOZE_PREFIX$id"
+    private fun consumedKey(id: Int) = "consumed_$id"
 
     private companion object {
         const val PREFIX = "alarm_"

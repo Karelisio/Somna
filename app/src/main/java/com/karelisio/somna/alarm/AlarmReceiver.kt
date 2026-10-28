@@ -13,10 +13,10 @@ class AlarmReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val spec = AlarmSpec.fromJson(intent.getStringExtra(AlarmScheduler.EXTRA_SPEC)) ?: return
         when (intent.action) {
-            AlarmScheduler.ACTION_RING, AlarmScheduler.ACTION_SNOOZE_RING ->
-                AlarmService.start(context, AlarmService.ACTION_RING, spec)
-            AlarmScheduler.ACTION_SUNRISE -> AlarmService.start(context, AlarmService.ACTION_SUNRISE, spec)
-            AlarmScheduler.ACTION_SMART -> AlarmService.start(context, AlarmService.ACTION_SMART, spec)
+            AlarmScheduler.ACTION_RING, AlarmScheduler.ACTION_SNOOZE_RING, AlarmScheduler.ACTION_BACKUP_RING ->
+                startOrFallback(context, AlarmService.ACTION_RING, spec)
+            AlarmScheduler.ACTION_SUNRISE -> startOrFallback(context, AlarmService.ACTION_SUNRISE, spec)
+            AlarmScheduler.ACTION_SMART -> runCatching { AlarmService.start(context, AlarmService.ACTION_SMART, spec) }
             ACTION_CANCEL_SNOOZE -> {
                 context.container.scheduler.cancelSnooze(spec.alarmId)
                 NotificationManagerCompat.from(context).cancel(Notifications.ID_SNOOZE_BASE + spec.alarmId)
@@ -31,6 +31,20 @@ class AlarmReceiver : BroadcastReceiver() {
                     }
                 }
             }
+        }
+    }
+
+    /**
+     * Exact alarms may start a foreground service; an inexact fallback (exact alarms denied on
+     * Android 12) may not. Then a full-screen notification opens the alarm screen, which starts it.
+     */
+    private fun startOrFallback(context: Context, action: String, spec: AlarmSpec) {
+        try {
+            AlarmService.start(context, action, spec)
+        } catch (_: IllegalStateException) {
+            Notifications.postFallback(context, spec)
+        } catch (_: SecurityException) {
+            Notifications.postFallback(context, spec)
         }
     }
 

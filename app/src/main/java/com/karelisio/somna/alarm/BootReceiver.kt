@@ -4,6 +4,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import androidx.core.os.UserManagerCompat
+import com.karelisio.somna.SomnaApp
 import com.karelisio.somna.container
 import com.karelisio.somna.widget.WidgetTicker
 import kotlinx.coroutines.launch
@@ -20,6 +21,7 @@ class BootReceiver : BroadcastReceiver() {
                 if (intent.action == Intent.ACTION_LOCKED_BOOT_COMPLETED || !UserManagerCompat.isUserUnlocked(context)) {
                     restoreFromSnapshot(context)
                 } else {
+                    (context.applicationContext as SomnaApp).onUnlocked()
                     context.container.alarms.rescheduleAll()
                     WidgetTicker.schedule(context)
                 }

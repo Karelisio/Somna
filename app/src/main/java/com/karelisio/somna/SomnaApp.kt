@@ -6,6 +6,7 @@ import com.karelisio.somna.alarm.Notifications
 import com.karelisio.somna.update.UpdateWorker
 import com.karelisio.somna.widget.SomnaWidget
 import com.karelisio.somna.widget.WidgetTicker
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -23,8 +24,15 @@ class SomnaApp : Application() {
         if (UserManagerCompat.isUserUnlocked(this)) onUnlocked()
     }
 
+    private val started = AtomicBoolean(false)
+
+    /**
+     * Work that needs credential storage. Runs once per process: at start when already unlocked,
+     * otherwise from [com.karelisio.somna.alarm.BootReceiver] (BOOT_COMPLETED) or the first screen.
+     */
     @OptIn(FlowPreview::class)
-    private fun onUnlocked() {
+    fun onUnlocked() {
+        if (!UserManagerCompat.isUserUnlocked(this) || !started.compareAndSet(false, true)) return
         if (!BuildConfig.DEBUG) UpdateWorker.schedule(this)
         val settings = container.settings.settings
         container.appScope.launch {

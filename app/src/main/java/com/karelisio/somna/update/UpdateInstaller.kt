@@ -32,11 +32,16 @@ object UpdateInstaller {
     private val _state = MutableStateFlow<InstallState>(InstallState.Idle)
     val state: StateFlow<InstallState> = _state
 
+    /** Android's "install this update?" screen, kept to reopen it if it couldn't be shown. */
+    @Volatile var pendingConfirmation: Intent? = null
+        internal set
+
     internal fun publish(state: InstallState) {
         _state.value = state
     }
 
     fun reset() {
+        pendingConfirmation = null
         _state.value = InstallState.Idle
     }
 
@@ -134,17 +139,22 @@ object UpdateInstaller {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) setPackageSource(PackageInstaller.PACKAGE_SOURCE_DOWNLOADED_FILE)
         }
         val sessionId = installer.createSession(params)
-        installer.openSession(sessionId).use { session ->
-            file.inputStream().use { input ->
-                session.openWrite("somna.apk", 0, file.length()).use { output ->
-                    input.copyTo(output)
-                    session.fsync(output)
+        try {
+            installer.openSession(sessionId).use { session ->
+                file.inputStream().use { input ->
+                    session.openWrite("somna.apk", 0, file.length()).use { output ->
+                        input.copyTo(output)
+                        session.fsync(output)
+                    }
                 }
+                val intent = Intent(context, InstallResultReceiver::class.java).setAction(InstallResultReceiver.ACTION)
+                val flags = PendingIntent.FLAG_UPDATE_CURRENT or
+                    (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) PendingIntent.FLAG_MUTABLE else 0)
+                session.commit(PendingIntent.getBroadcast(context, sessionId, intent, flags).intentSender)
             }
-            val intent = Intent(context, InstallResultReceiver::class.java).setAction(InstallResultReceiver.ACTION)
-            val flags = PendingIntent.FLAG_UPDATE_CURRENT or
-                (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) PendingIntent.FLAG_MUTABLE else 0)
-            session.commit(PendingIntent.getBroadcast(context, sessionId, intent, flags).intentSender)
+        } catch (e: Exception) {
+            runCatching { installer.abandonSession(sessionId) }
+            throw e
         }
     }
 }

@@ -46,6 +46,16 @@ class NextTriggerTest {
     }
 
     @Test
+    fun `daylight saving gap does not shift the following days`() {
+        // Europe/Paris springs forward on 2027-03-28 (02:00 → 03:00).
+        val saturday = ZonedDateTime.of(2027, 3, 27, 12, 0, 0, 0, zone)
+        val weekdays = AlarmScheduler.nextTrigger(2, 30, AlarmEntity.WEEKDAYS, saturday)
+        assertEquals(ZonedDateTime.of(2027, 3, 29, 2, 30, 0, 0, zone), weekdays)
+        val afterGap = ZonedDateTime.of(2027, 3, 28, 3, 30, 0, 0, zone)
+        assertEquals(ZonedDateTime.of(2027, 3, 29, 2, 30, 0, 0, zone), AlarmScheduler.nextTrigger(2, 30, AlarmEntity.EVERY_DAY, afterGap))
+    }
+
+    @Test
     fun `spec survives json round trip`() {
         val spec = AlarmSpec(alarmId = 3, triggerAt = 123L, hour = 6, minute = 50, days = 31, sound = "BIRDS", mission = "MATH")
         assertEquals(spec, AlarmSpec.fromJson(spec.toJson()))

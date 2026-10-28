@@ -43,6 +43,10 @@ class AlarmRepository(
     }
 
     suspend fun save(alarm: AlarmEntity) {
+        val before = dao.get(alarm.id)
+        if (before != null && (before.hour != alarm.hour || before.minute != alarm.minute || before.days != alarm.days || !alarm.enabled)) {
+            AlarmService.abortPending(context, alarm.id)
+        }
         dao.update(alarm)
         scheduler.schedule(alarm, settingsRepo.current())
         onAlarmsChanged()
@@ -54,6 +58,7 @@ class AlarmRepository(
     }
 
     suspend fun delete(alarm: AlarmEntity) {
+        AlarmService.abortPending(context, alarm.id)
         dao.delete(alarm)
         scheduler.cancel(alarm.id)
         scheduler.cancelSnooze(alarm.id)
@@ -90,15 +95,18 @@ class AlarmRepository(
     suspend fun onOccurrenceConsumed(spec: AlarmSpec) {
         if (spec.test) return
         scheduler.cancel(spec.alarmId)
+        scheduler.snapshot.markConsumed(spec.alarmId, spec.triggerAt)
         val unlocked = UserManagerCompat.isUserUnlocked(context)
         val after = AlarmScheduler.zoned(spec.triggerAt)
         if (spec.repeating) {
-            val alarm = if (unlocked) runCatching { dao.get(spec.alarmId) }.getOrNull() else null
-            if (alarm != null) {
-                scheduler.schedule(alarm, settingsRepo.current(), after)
+            if (unlocked) {
+                // Deleted meanwhile: never resurrect it from the spec.
+                val alarm = runCatching { dao.get(spec.alarmId) }.getOrNull()
+                if (alarm != null) scheduler.schedule(alarm, settingsRepo.current(), after)
+                else scheduler.snapshot.remove(spec.alarmId)
             } else {
                 val next = AlarmScheduler.nextTrigger(spec.hour, spec.minute, spec.days, after)
-                scheduler.scheduleSpec(spec.copy(triggerAt = next.toInstant().toEpochMilli(), snoozeCount = 0))
+                scheduler.scheduleSpec(spec.copy(triggerAt = next.toInstant().toEpochMilli(), snoozeCount = 0, early = false, backup = false))
             }
         } else {
             scheduler.snapshot.remove(spec.alarmId)

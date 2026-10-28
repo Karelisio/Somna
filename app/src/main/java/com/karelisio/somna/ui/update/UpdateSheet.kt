@@ -75,7 +75,9 @@ fun UpdateSheetHost() {
             somna.updateSheetDismissed = true
             somna.forceShowUpdate = false
             val state = UpdateInstaller.state.value
-            if (state is InstallState.Failed || state is InstallState.NeedsPermission) UpdateInstaller.reset()
+            if (state is InstallState.Failed || state is InstallState.NeedsPermission || state is InstallState.WaitingForUser) {
+                UpdateInstaller.reset()
+            }
         },
         onSkip = {
             somna.skipVersion(info.version)
@@ -195,17 +197,31 @@ private fun UpdateSheet(info: ReleaseInfo, onClose: () -> Unit, onSkip: () -> Un
                             }
                         }
                     }
-                    Phase.Working -> Row(verticalAlignment = Alignment.CenterVertically) {
-                        LoadingIndicator(Modifier.size(48.dp))
-                        Spacer(Modifier.width(12.dp))
-                        Text(
-                            when (state) {
-                                InstallState.Verifying -> "Vérification de la signature…"
-                                InstallState.WaitingForUser -> "Confirme l'installation dans la fenêtre d'Android"
-                                else -> "Installation…"
-                            },
-                            style = MaterialTheme.typography.titleSmall,
-                        )
+                    Phase.Working -> Column {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            LoadingIndicator(Modifier.size(48.dp))
+                            Spacer(Modifier.width(12.dp))
+                            Text(
+                                when (state) {
+                                    InstallState.Verifying -> "Vérification de la signature…"
+                                    InstallState.WaitingForUser -> "Confirme l'installation dans la fenêtre d'Android"
+                                    else -> "Installation…"
+                                },
+                                style = MaterialTheme.typography.titleSmall,
+                            )
+                        }
+                        if (state == InstallState.WaitingForUser) {
+                            Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.End) {
+                                TextButton(onClick = { UpdateInstaller.reset() }) { Text("Annuler") }
+                                Button(
+                                    onClick = {
+                                        UpdateInstaller.pendingConfirmation?.let { runCatching { context.startActivity(it) } }
+                                            ?: UpdateInstaller.reset()
+                                    },
+                                    shapes = ButtonDefaults.shapes(),
+                                ) { Text("Confirmer") }
+                            }
+                        }
                     }
                     Phase.Done -> Row(verticalAlignment = Alignment.CenterVertically) {
                         AnimatedCheck(size = 44.dp)

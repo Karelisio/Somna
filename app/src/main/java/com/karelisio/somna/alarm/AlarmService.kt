@@ -38,36 +38,50 @@ class AlarmService : Service() {
     private var monitor: SmartWakeMonitor? = null
     private var wakeLock: PowerManager.WakeLock? = null
     private var timeoutJob: Job? = null
+    private var foregroundId = 0
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val current = AlarmRuntime.session.value
         val spec = AlarmSpec.fromJson(intent?.getStringExtra(AlarmScheduler.EXTRA_SPEC)) ?: current?.spec
-        // Always enter the foreground immediately (required after startForegroundService).
-        if (current != null) refreshNotification() else goForeground(buildPlaceholder(), smart = false)
         if (spec == null) {
+            ensureForeground()
             stopIfIdle()
             return START_NOT_STICKY
         }
+        // Each branch enters the foreground synchronously (required after startForegroundService):
+        // startForeground is only ever called here, while the start exemption applies.
         when (intent?.action) {
             ACTION_SMART -> startSmart(spec)
             ACTION_SUNRISE -> startSunrise(spec)
             ACTION_RING -> ring(spec)
-            ACTION_SNOOZE -> snooze()
-            ACTION_DISMISS -> dismiss()
-            ACTION_MISSION -> player?.setDucked(intent.getBooleanExtra(EXTRA_DUCK, false))
-            else -> refreshNotification()
+            ACTION_SNOOZE -> {
+                ensureForeground()
+                snooze()
+            }
+            ACTION_DISMISS -> {
+                ensureForeground()
+                dismiss()
+            }
+            ACTION_ABORT -> {
+                ensureForeground()
+                abort(intent.getIntExtra(EXTRA_ALARM_ID, -1))
+            }
+            ACTION_MISSION -> {
+                ensureForeground()
+                player?.setDucked(intent.getBooleanExtra(EXTRA_DUCK, false))
+            }
+            else -> ensureForeground()
         }
         return START_NOT_STICKY
     }
 
     private fun startSmart(spec: AlarmSpec) {
         val session = AlarmRuntime.session.value
-        if (session?.ringing == true) return
+        if (session?.ringing == true || (session != null && session.spec.alarmId != spec.alarmId)) return ensureForeground()
         AlarmRuntime.outcome.value = null
-        AlarmRuntime.session.value = (session?.takeIf { it.spec.alarmId == spec.alarmId } ?: AlarmSession(spec))
-            .copy(smartActive = true)
+        AlarmRuntime.session.value = (session ?: AlarmSession(spec)).copy(smartActive = true)
         acquireWakeLock(spec.smartMinutes + 5)
         monitor?.stop()
         monitor = SmartWakeMonitor(this, spec.smartSensitivity) { onLightSleep() }.also { m ->
@@ -79,19 +93,20 @@ class AlarmService : Service() {
     private fun onLightSleep() {
         val session = AlarmRuntime.session.value ?: return
         if (session.ringing) return
-        // Light sleep detected inside the window: ring now rather than in the middle of a deep phase.
+        // Light sleep inside the window: ring now rather than in a deep phase. Going through an
+        // alarm clock restarts the service with the exact-alarm exemption (no background FGS call).
         if (session.spec.triggerAt - System.currentTimeMillis() > 60_000) {
-            AlarmRuntime.session.value = session.copy(smartTriggered = true)
-            ring(session.spec)
+            monitor?.stop()
+            monitor = null
+            container.scheduler.ringNow(session.spec)
         }
     }
 
     private fun startSunrise(spec: AlarmSpec) {
         val session = AlarmRuntime.session.value
-        if (session?.ringing == true) return
+        if (session?.ringing == true || (session != null && session.spec.alarmId != spec.alarmId)) return ensureForeground()
         AlarmRuntime.outcome.value = null
-        val base = session?.takeIf { it.spec.alarmId == spec.alarmId } ?: AlarmSession(spec)
-        AlarmRuntime.session.value = base.copy(sunriseStart = System.currentTimeMillis())
+        AlarmRuntime.session.value = (session ?: AlarmSession(spec)).copy(sunriseStart = System.currentTimeMillis())
         acquireWakeLock(spec.sunriseMinutes + 5)
         refreshNotification()
     }
@@ -99,26 +114,42 @@ class AlarmService : Service() {
     private fun ring(spec: AlarmSpec) {
         val session = AlarmRuntime.session.value
         if (session?.ringing == true) {
-            // Another alarm is already ringing: just consume this occurrence.
-            if (session.spec.alarmId != spec.alarmId && spec.snoozeCount == 0) consume(spec)
-            return
+            // Same alarm (backup re-ring while still alive): nothing to do. Another alarm: deliver it
+            // once this one is handled rather than losing it.
+            if (session.spec.alarmId != spec.alarmId) container.scheduler.requeue(spec)
+            return ensureForeground()
+        }
+        if (session != null && session.spec.alarmId != spec.alarmId && !spec.test) {
+            // Another alarm's sunrise / smart window is running: that one goes first.
+            container.scheduler.requeue(spec)
+            return ensureForeground()
         }
         AlarmRuntime.outcome.value = null
-        if (spec.snoozeCount == 0) consume(spec) else container.scheduler.snapshot.removeSnooze(spec.alarmId)
         monitor?.stop()
         monitor = null
-        val ringSpec = if (session != null && session.spec.alarmId == spec.alarmId && spec.snoozeCount == 0) session.spec else spec
-        AlarmRuntime.session.value = (session?.takeIf { it.spec.alarmId == spec.alarmId } ?: AlarmSession(ringSpec))
-            .copy(spec = ringSpec, ringing = true, ringStartedAt = System.currentTimeMillis(), smartActive = false)
+        AlarmRuntime.session.value = (session ?: AlarmSession(spec)).copy(
+            spec = spec,
+            ringing = true,
+            ringStartedAt = System.currentTimeMillis(),
+            smartActive = false,
+            smartTriggered = spec.early || session?.smartTriggered == true,
+        )
         acquireWakeLock(RING_TIMEOUT_MINUTES + 2)
-        NotificationManagerCompat.from(this).cancel(Notifications.ID_SNOOZE_BASE + spec.alarmId)
         refreshNotification()
+        // Secure the ring first (re-ring if the process dies), then consume the occurrence.
+        container.scheduler.armBackup(spec)
+        if (spec.snoozeCount == 0 && !spec.backup) consume(spec)
+        container.scheduler.cancelSnooze(spec.alarmId)
         SleepSoundService.stop(this) // no rain over the alarm
         player?.stop()
-        player = AlarmPlayer(this, ringSpec).also { it.start(scope) }
+        player = AlarmPlayer(this, spec).also { it.start(scope) }
         timeoutJob?.cancel()
         timeoutJob = scope.launch {
-            delay(RING_TIMEOUT_MINUTES * 60_000L)
+            val started = System.currentTimeMillis()
+            while (System.currentTimeMillis() - started < RING_TIMEOUT_MINUTES * 60_000L) {
+                delay(60_000)
+                container.scheduler.armBackup(spec)
+            }
             timeOut()
         }
     }
@@ -144,6 +175,15 @@ class AlarmService : Service() {
         if (!session.ringing) consume(session.spec)
         recordWake(session.spec)
         AlarmRuntime.outcome.value = AlarmOutcome.Dismissed(session.spec, System.currentTimeMillis())
+        finishSession()
+    }
+
+    /** The alarm was edited, disabled or deleted during its sunrise / smart window: drop the session. */
+    private fun abort(alarmId: Int) {
+        val session = AlarmRuntime.session.value ?: return stopIfIdle()
+        if (session.ringing || session.spec.alarmId != alarmId) return
+        stopPlayback()
+        AlarmRuntime.outcome.value = null
         finishSession()
     }
 
@@ -177,9 +217,16 @@ class AlarmService : Service() {
     }
 
     private fun finishSession() {
+        AlarmRuntime.session.value?.let { container.scheduler.cancelBackup(it.spec.alarmId) }
         AlarmRuntime.session.value = null
         releaseWakeLock()
         stopForegroundCompat()
+        NotificationManagerCompat.from(this).apply {
+            cancel(Notifications.ID_SMART)
+            cancel(Notifications.ID_SUNRISE)
+            cancel(Notifications.ID_RING)
+        }
+        foregroundId = 0
         stopSelf()
     }
 
@@ -192,14 +239,20 @@ class AlarmService : Service() {
 
     // region Notifications
 
+    /** Foreground with the notification of the current phase (each phase has its own id, so the
+     * full-screen intent fires when the sunrise or the ringing starts). */
     private fun refreshNotification() {
         val session = AlarmRuntime.session.value ?: return
-        val notification = when {
-            session.ringing -> buildRinging(session)
-            session.sunriseStart != null -> buildSunrise(session)
-            else -> buildSmart(session)
+        when {
+            session.ringing -> goForeground(Notifications.ID_RING, buildRinging(session), smart = false)
+            session.sunriseStart != null -> goForeground(Notifications.ID_SUNRISE, buildSunrise(session), smart = session.smartActive)
+            else -> goForeground(Notifications.ID_SMART, buildSmart(session), smart = session.smartActive)
         }
-        goForeground(notification, smart = session.smartActive && !session.ringing)
+    }
+
+    private fun ensureForeground() {
+        if (AlarmRuntime.session.value != null) refreshNotification()
+        else goForeground(Notifications.ID_SMART, buildPlaceholder(), smart = false)
     }
 
     private fun buildPlaceholder(): Notification =
@@ -231,7 +284,6 @@ class AlarmService : Service() {
             .setContentTitle("Lever de soleil")
             .setContentText("Réveil en douceur à ${TimeFormat.clock(session.spec.triggerAt)}")
             .setOngoing(true)
-            .setSilent(true)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
@@ -248,7 +300,6 @@ class AlarmService : Service() {
             .setContentTitle("$title · ${TimeFormat.clock(System.currentTimeMillis())}")
             .setContentText(if (session.smartTriggered) "Tu es en sommeil léger : c'est le bon moment ☀️" else "Bonjour ☀️")
             .setOngoing(true)
-            .setSilent(true)
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
@@ -294,18 +345,21 @@ class AlarmService : Service() {
         PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
     )
 
-    private fun goForeground(notification: Notification, smart: Boolean) {
+    private fun goForeground(id: Int, notification: Notification, smart: Boolean) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             val media = ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
             val type = if (smart && Build.VERSION.SDK_INT >= 34) media or ServiceInfo.FOREGROUND_SERVICE_TYPE_HEALTH else media
             try {
-                startForeground(Notifications.ID_ALARM_SERVICE, notification, type)
-            } catch (_: RuntimeException) {
-                startForeground(Notifications.ID_ALARM_SERVICE, notification, media)
+                startForeground(id, notification, type)
+            } catch (e: IllegalArgumentException) {
+                // Health type refused on this device: media playback alone is enough.
+                startForeground(id, notification, media)
             }
         } else {
-            startForeground(Notifications.ID_ALARM_SERVICE, notification)
+            startForeground(id, notification)
         }
+        if (foregroundId != 0 && foregroundId != id) NotificationManagerCompat.from(this).cancel(foregroundId)
+        foregroundId = id
     }
 
     private fun stopForegroundCompat() = stopForeground(STOP_FOREGROUND_REMOVE)
@@ -338,13 +392,22 @@ class AlarmService : Service() {
         const val ACTION_SNOOZE = "com.karelisio.somna.service.SNOOZE"
         const val ACTION_DISMISS = "com.karelisio.somna.service.DISMISS"
         const val ACTION_MISSION = "com.karelisio.somna.service.MISSION"
+        const val ACTION_ABORT = "com.karelisio.somna.service.ABORT"
         const val EXTRA_DUCK = "duck"
+        const val EXTRA_ALARM_ID = "alarm_id"
         private const val RING_TIMEOUT_MINUTES = 15
 
         fun start(context: Context, action: String, spec: AlarmSpec? = null) {
             val intent = Intent(context, AlarmService::class.java).setAction(action)
             spec?.let { intent.putExtra(AlarmScheduler.EXTRA_SPEC, it.toJson()) }
             ContextCompat.startForegroundService(context, intent)
+        }
+
+        /** Drops a sunrise / smart-window session of [alarmId] that hasn't started ringing. */
+        fun abortPending(context: Context, alarmId: Int) {
+            val session = AlarmRuntime.session.value ?: return
+            if (session.ringing || session.spec.alarmId != alarmId) return
+            command(context, ACTION_ABORT) { putExtra(EXTRA_ALARM_ID, alarmId) }
         }
 
         fun command(context: Context, action: String, extras: Intent.() -> Unit = {}) {

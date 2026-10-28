@@ -469,6 +469,10 @@ private fun RatingCard(onDone: () -> Unit) {
     var rated by remember { mutableIntStateOf(0) }
     var slept by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(Unit) {
+        delay(60_000) // went back to sleep without answering: don't keep the screen on
+        onDone()
+    }
+    LaunchedEffect(Unit) {
         if (!UserManagerCompat.isUserUnlocked(context)) return@LaunchedEffect
         delay(400)
         val latest = runCatching { context.container.database.sleepDao().latest() }.getOrNull()

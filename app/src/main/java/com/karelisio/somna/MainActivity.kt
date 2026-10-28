@@ -40,6 +40,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         val splash = installSplashScreen()
         super.onCreate(savedInstanceState)
+        (application as SomnaApp).onUnlocked()
         splash.setKeepOnScreenCondition { viewModel.settings.value == null }
         splash.setOnExitAnimationListener { provider ->
             val icon: View? = runCatching { provider.iconView }.getOrNull()

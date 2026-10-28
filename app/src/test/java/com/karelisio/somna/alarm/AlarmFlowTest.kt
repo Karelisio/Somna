@@ -79,6 +79,40 @@ class AlarmFlowTest {
     }
 
     @Test
+    fun `while ringing, a backup re-ring is armed and another alarm is requeued, not lost`() {
+        val controller = Robolectric.buildService(AlarmService::class.java, intent(AlarmService.ACTION_RING, spec(test = true)))
+            .create().startCommand(0, 1)
+        val alarmManager = shadowOf(app.getSystemService(AlarmManager::class.java))
+        assertTrue("backup re-ring", alarmManager.scheduledAlarms.any { it.alarmClockInfo != null && it.triggerAtTime > System.currentTimeMillis() + 60_000 })
+
+        val other = spec().copy(alarmId = 7, test = false)
+        controller.withIntent(intent(AlarmService.ACTION_RING, other)).startCommand(0, 2)
+        assertEquals(42, AlarmRuntime.session.value!!.spec.alarmId)
+        val requeued = alarmManager.scheduledAlarms.filter { it.alarmClockInfo != null }
+            .any { it.triggerAtTime in (System.currentTimeMillis() + 50_000)..(System.currentTimeMillis() + 61_000) }
+        assertTrue("second alarm requeued", requeued)
+    }
+
+    @Test
+    fun `a deleted repeating alarm is not resurrected when its occurrence is consumed`() = runBlocking {
+        val alarm = app.container.alarms.create(7, 0, days = com.karelisio.somna.data.AlarmEntity.EVERY_DAY)
+        val spec = app.container.scheduler.snapshot.specs().first { it.alarmId == alarm.id }
+        app.container.alarms.delete(alarm)
+        app.container.alarms.onOccurrenceConsumed(spec)
+        assertTrue(app.container.scheduler.snapshot.specs().none { it.alarmId == alarm.id })
+    }
+
+    @Test
+    fun `an occurrence consumed early is not re-armed by a later reschedule`() = runBlocking {
+        val alarm = app.container.alarms.create(7, 0, days = com.karelisio.somna.data.AlarmEntity.EVERY_DAY)
+        val next = AlarmScheduler.nextTrigger(7, 0, alarm.days).toInstant().toEpochMilli()
+        app.container.scheduler.snapshot.markConsumed(alarm.id, next)
+        app.container.alarms.rescheduleAll()
+        val armed = app.container.scheduler.snapshot.specs().first { it.alarmId == alarm.id }.triggerAt
+        assertEquals(AlarmScheduler.nextTrigger(7, 0, alarm.days, AlarmScheduler.zoned(next)).toInstant().toEpochMilli(), armed)
+    }
+
+    @Test
     fun `creating an alarm schedules an alarm clock plus the sunrise`() = runBlocking {
         val alarm = app.container.alarms.create(6, 50)
         val scheduled = shadowOf(app.getSystemService(AlarmManager::class.java)).scheduledAlarms
