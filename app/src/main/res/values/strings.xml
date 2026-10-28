@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Somna</string>
+    <string name="widget_description">Si tu te couches maintenant, les meilleures heures de réveil</string>
+</resources>

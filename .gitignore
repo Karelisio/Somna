@@ -1,0 +1,23 @@
+# Gradle / build
+.gradle/
+build/
+**/build/
+.kotlin/
+captures/
+.externalNativeBuild/
+.cxx/
+
+# IDE
+.idea/
+*.iml
+.DS_Store
+
+# Local configuration
+local.properties
+
+# Signing — never commit keystores or passwords
+*.jks
+*.keystore
+*.p12
+keystore.properties
+signing.properties

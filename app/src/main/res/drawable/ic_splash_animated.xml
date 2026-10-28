@@ -1,0 +1,216 @@
+<?xml version="1.0" encoding="utf-8"?>
+<animated-vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt">
+    <aapt:attr name="android:drawable">
+        <vector
+            android:width="288dp"
+            android:height="288dp"
+            android:viewportWidth="108"
+            android:viewportHeight="108">
+            <path
+                android:name="glow"
+                android:fillAlpha="0"
+                android:pathData="M20,47a25,25 0 1,0 50,0a25,25 0 1,0 -50,0Z">
+                <aapt:attr name="android:fillColor">
+                    <gradient
+                        android:type="radial"
+                        android:centerX="45"
+                        android:centerY="47"
+                        android:gradientRadius="25">
+                        <item android:offset="0" android:color="#3DFFE8A3" />
+                        <item android:offset="1" android:color="#00FFE8A3" />
+                    </gradient>
+                </aapt:attr>
+            </path>
+            <path
+                android:name="wave1"
+                android:pathData="M29,63C33.55,59.54 36.95,59.54 41.5,63C46.05,66.46 49.45,66.46 54,63C58.55,59.54 61.95,59.54 66.5,63C71.05,66.46 74.45,66.46 79,63"
+                android:strokeColor="#FFC3B5FF"
+                android:strokeAlpha="1.0"
+                android:strokeWidth="3.4"
+                android:strokeLineCap="round"
+                android:strokeLineJoin="round"
+                android:trimPathEnd="0" />
+            <path
+                android:name="wave2"
+                android:pathData="M33,71.5C36.82,68.31 39.68,68.31 43.5,71.5C47.32,74.69 50.18,74.69 54,71.5C57.82,68.31 60.68,68.31 64.5,71.5C68.32,74.69 71.18,74.69 75,71.5"
+                android:strokeColor="#FF9AAEFF"
+                android:strokeAlpha="0.85"
+                android:strokeWidth="3.0"
+                android:strokeLineCap="round"
+                android:strokeLineJoin="round"
+                android:trimPathEnd="0" />
+            <path
+                android:name="wave3"
+                android:pathData="M39,80C42.64,77.07 45.36,77.07 49,80C52.64,82.93 55.36,82.93 59,80C62.64,77.07 65.36,77.07 69,80"
+                android:strokeColor="#FF8EA2FF"
+                android:strokeAlpha="0.6"
+                android:strokeWidth="2.6"
+                android:strokeLineCap="round"
+                android:strokeLineJoin="round"
+                android:trimPathEnd="0" />
+            <group
+                android:name="moonGroup"
+                android:pivotX="50"
+                android:pivotY="42"
+                android:rotation="-28"
+                android:scaleX="0.62"
+                android:scaleY="0.62">
+                <path
+                    android:name="moon"
+                    android:pathData="M47.9,26.14A16,16 0 1,0 65.48,46.06A13.5,13.5 0 0,1 47.9,26.14Z"
+                    android:fillAlpha="0">
+                    <aapt:attr name="android:fillColor">
+                        <gradient
+                            android:type="linear"
+                            android:startX="38"
+                            android:startY="28"
+                            android:endX="60"
+                            android:endY="58">
+                            <item android:offset="0" android:color="#FFFFF1C4" />
+                            <item android:offset="1" android:color="#FFF2CC7A" />
+                        </gradient>
+                    </aapt:attr>
+                </path>
+            </group>
+            <path
+                android:name="star1"
+                android:fillColor="#FFFFF4D6" android:fillAlpha="0"
+                android:pathData="M73,24.8Q73.9,28.1 77.2,29Q73.9,29.9 73,33.2Q72.1,29.9 68.8,29Q72.1,28.1 73,24.8Z" />
+            <path
+                android:name="star2"
+                android:fillColor="#FFFFF4D6" android:fillAlpha="0"
+                android:pathData="M80.5,37.6Q81.05,39.45 82.9,40Q81.05,40.55 80.5,42.4Q79.95,40.55 78.1,40Q79.95,39.45 80.5,37.6Z" />
+            <path
+                android:name="star3"
+                android:fillColor="#FFFFF4D6" android:fillAlpha="0"
+                android:pathData="M31,30.8Q31.5,32.5 33.2,33Q31.5,33.5 31,35.2Q30.5,33.5 28.8,33Q30.5,32.5 31,30.8Z" />
+        </vector>
+    </aapt:attr>
+    <target android:name="glow">
+        <aapt:attr name="android:animation">
+            <objectAnimator
+                android:propertyName="fillAlpha"
+                android:valueFrom="0"
+                android:valueTo="1"
+                android:valueType="floatType"
+                android:duration="700"
+                android:startOffset="150"
+                android:interpolator="@android:interpolator/decelerate_cubic" />
+        </aapt:attr>
+    </target>
+    <target android:name="moonGroup">
+        <aapt:attr name="android:animation">
+            <set android:ordering="together">
+                <objectAnimator
+                    android:propertyName="scaleX"
+                    android:valueFrom="0.62"
+                    android:valueTo="1"
+                    android:valueType="floatType"
+                    android:duration="650"
+                    android:startOffset="0"
+                    android:interpolator="@android:interpolator/overshoot" />
+                <objectAnimator
+                    android:propertyName="scaleY"
+                    android:valueFrom="0.62"
+                    android:valueTo="1"
+                    android:valueType="floatType"
+                    android:duration="650"
+                    android:startOffset="0"
+                    android:interpolator="@android:interpolator/overshoot" />
+                <objectAnimator
+                    android:propertyName="rotation"
+                    android:valueFrom="-28"
+                    android:valueTo="0"
+                    android:valueType="floatType"
+                    android:duration="700"
+                    android:startOffset="0"
+                    android:interpolator="@android:interpolator/fast_out_slow_in" />
+            </set>
+        </aapt:attr>
+    </target>
+    <target android:name="moon">
+        <aapt:attr name="android:animation">
+            <objectAnimator
+                android:propertyName="fillAlpha"
+                android:valueFrom="0"
+                android:valueTo="1"
+                android:valueType="floatType"
+                android:duration="350"
+                android:startOffset="0"
+                android:interpolator="@android:interpolator/decelerate_cubic" />
+        </aapt:attr>
+    </target>
+    <target android:name="wave1">
+        <aapt:attr name="android:animation">
+            <objectAnimator
+                android:propertyName="trimPathEnd"
+                android:valueFrom="0"
+                android:valueTo="1"
+                android:valueType="floatType"
+                android:duration="520"
+                android:startOffset="220"
+                android:interpolator="@android:interpolator/fast_out_slow_in" />
+        </aapt:attr>
+    </target>
+    <target android:name="wave2">
+        <aapt:attr name="android:animation">
+            <objectAnimator
+                android:propertyName="trimPathEnd"
+                android:valueFrom="0"
+                android:valueTo="1"
+                android:valueType="floatType"
+                android:duration="520"
+                android:startOffset="340"
+                android:interpolator="@android:interpolator/fast_out_slow_in" />
+        </aapt:attr>
+    </target>
+    <target android:name="wave3">
+        <aapt:attr name="android:animation">
+            <objectAnimator
+                android:propertyName="trimPathEnd"
+                android:valueFrom="0"
+                android:valueTo="1"
+                android:valueType="floatType"
+                android:duration="520"
+                android:startOffset="460"
+                android:interpolator="@android:interpolator/fast_out_slow_in" />
+        </aapt:attr>
+    </target>
+    <target android:name="star1">
+        <aapt:attr name="android:animation">
+            <objectAnimator
+                android:propertyName="fillAlpha"
+                android:valueFrom="0"
+                android:valueTo="1"
+                android:valueType="floatType"
+                android:duration="300"
+                android:startOffset="560"
+                android:interpolator="@android:interpolator/decelerate_cubic" />
+        </aapt:attr>
+    </target>
+    <target android:name="star2">
+        <aapt:attr name="android:animation">
+            <objectAnimator
+                android:propertyName="fillAlpha"
+                android:valueFrom="0"
+                android:valueTo="0.75"
+                android:valueType="floatType"
+                android:duration="300"
+                android:startOffset="660"
+                android:interpolator="@android:interpolator/decelerate_cubic" />
+        </aapt:attr>
+    </target>
+    <target android:name="star3">
+        <aapt:attr name="android:animation">
+            <objectAnimator
+                android:propertyName="fillAlpha"
+                android:valueFrom="0"
+                android:valueTo="0.6"
+                android:valueType="floatType"
+                android:duration="300"
+                android:startOffset="740"
+                android:interpolator="@android:interpolator/decelerate_cubic" />
+        </aapt:attr>
+    </target>
+</animated-vector>

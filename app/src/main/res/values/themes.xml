@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.Somna" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/night_surface</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+
+    <style name="Theme.Somna.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/night_blue</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_static</item>
+        <item name="postSplashScreenTheme">@style/Theme.Somna</item>
+    </style>
+
+    <style name="Theme.Somna.Alarm" parent="Theme.Somna">
+        <item name="android:windowBackground">@android:color/black</item>
+        <item name="android:windowAnimationStyle">@android:style/Animation.Activity</item>
+    </style>
+</resources>

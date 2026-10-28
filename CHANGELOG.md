@@ -1,0 +1,13 @@
+# Changelog
+
+Les notes d'une version sont reprises telles quelles dans la GitHub Release et affichées dans l'appli.
+
+## 1.0.0
+
+- **Calculateur de cycles** : « Je veux me lever à… » et « Je me couche maintenant », 4 à 6 cycles, cycles et endormissement réglables.
+- **Réveil fiable** : alarmes exactes, plein écran par-dessus l'écran de verrouillage, sonne en mode silencieux et après un redémarrage.
+- **Réveil progressif** : lever de soleil de 10 min, sons doux en crescendo (oiseaux, carillon, vagues), vibration progressive.
+- **Réveil intelligent** : fenêtre de 20 à 30 min, sonne en sommeil léger grâce à l'accéléromètre.
+- **Snooze réglable** et mission anti-snooze (calcul ou puzzle).
+- **Routine** : rappel « va te coucher », sons d'endormissement avec minuterie, journal de sommeil et statistiques 7 / 30 jours.
+- **Widget** aux couleurs dynamiques et **mises à jour intégrées**.
