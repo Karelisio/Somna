@@ -33,8 +33,8 @@ Prérequis : JDK 17+ (21 recommandé), Android SDK avec `platforms;android-37.0`
 Le workflow `.github/workflows/android.yml` :
 
 - à chaque push sur `main` et chaque PR : tests + APK release en **artefact** ;
-- à chaque tag `vX.Y.Z` : APK **signé** publié dans une **GitHub Release** avec le changelog (section `## X.Y.Z` de `CHANGELOG.md`, sinon les commits depuis le tag précédent) ;
-- `versionCode` = `github.run_number`, `versionName` = tag sans le `v`.
+- **release automatique** : quand un push sur `main` contient dans le fichier `VERSION` une version qui n'a pas encore de tag, la CI crée le tag `vX.Y.Z` et la **GitHub Release** avec l'APK **signé** et le changelog (section `## X.Y.Z` de `CHANGELOG.md`, sinon les commits depuis le tag précédent). Pousser un tag `vX.Y.Z` à la main marche aussi ;
+- `versionCode` = `github.run_number`, `versionName` = `VERSION` (`X.Y.Z-dev.N` hors release).
 
 Aucun secret n'est commité. Crée le keystore **une seule fois** et garde-le précieusement : toutes les versions doivent être signées avec la même clé, sinon Android refuse la mise à jour.
 
@@ -53,11 +53,7 @@ Secrets à créer dans *Settings › Secrets and variables › Actions* :
 | `KEY_ALIAS` | `somna` |
 | `KEY_PASSWORD` | mot de passe de la clé |
 
-Publier une version :
-
-```bash
-git tag v1.0.0 && git push origin v1.0.0
-```
+Publier une version : mettre `X.Y.Z` dans `VERSION`, ajouter une section `## X.Y.Z` à `CHANGELOG.md`, pousser sur `main`.
 
 > La mise à jour intégrée interroge `https://api.github.com/repos/karelisio/somna/releases/latest` sans authentification : les releases doivent être accessibles publiquement (dépôt public, ou dépôt public dédié aux releases — à changer dans `UPDATE_REPO` de `app/build.gradle.kts`).
 

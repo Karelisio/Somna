@@ -5,9 +5,11 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
-// Versioning: CI passes -PversionCode=<github.run_number> -PversionName=<tag without "v">.
+// Versioning: the VERSION file holds the release version; CI passes -PversionCode=<github.run_number>
+// and -PversionName. Local builds are "<VERSION>-dev".
+val fileVersion = providers.fileContents(rootProject.layout.projectDirectory.file("VERSION")).asText.map { it.trim() }
 val somnaVersionCode = providers.gradleProperty("versionCode").orNull?.toIntOrNull() ?: 1
-val somnaVersionName = providers.gradleProperty("versionName").orNull?.removePrefix("v") ?: "0.1.0-dev"
+val somnaVersionName = providers.gradleProperty("versionName").orNull?.removePrefix("v") ?: "${fileVersion.get()}-dev"
 
 // Signing: provided only through environment variables (CI secrets) — nothing sensitive in the repo.
 val keystorePath: String? = System.getenv("SOMNA_KEYSTORE_PATH")

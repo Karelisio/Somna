@@ -12,7 +12,8 @@ permissions:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
+  # Never cancel a run on main or a tag: it may be publishing a release.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   build:
@@ -41,17 +42,31 @@ jobs:
           yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "platforms;android-37.0" "build-tools;37.0.0" > /dev/null
 
+      # Release = a vX.Y.Z tag push, or a push on main whose VERSION file has no tag yet.
       - name: Compute version
         id: version
         run: |
+          FILE_VERSION=$(tr -d ' \r\n' < VERSION)
+          if ! echo "$FILE_VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::VERSION doit contenir X.Y.Z (trouvé : '$FILE_VERSION')"
+            exit 1
+          fi
           if [ "$IS_TAG" = "true" ]; then
             NAME="${GITHUB_REF_NAME#v}"
+            RELEASE=true
+          elif [ "$GITHUB_EVENT_NAME" = "push" ] && [ "$GITHUB_REF" = "refs/heads/main" ] \
+               && ! git rev-parse -q --verify "refs/tags/v$FILE_VERSION" > /dev/null; then
+            NAME="$FILE_VERSION"
+            RELEASE=true
           else
-            NAME="0.0.0-dev.${GITHUB_RUN_NUMBER}"
+            NAME="$FILE_VERSION-dev.${GITHUB_RUN_NUMBER}"
+            RELEASE=false
           fi
           echo "name=$NAME" >> "$GITHUB_OUTPUT"
+          echo "tag=v$NAME" >> "$GITHUB_OUTPUT"
+          echo "release=$RELEASE" >> "$GITHUB_OUTPUT"
           echo "code=${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
-          echo "Version $NAME (code ${GITHUB_RUN_NUMBER})"
+          echo "Version $NAME (code ${GITHUB_RUN_NUMBER}), release : $RELEASE"
 
       - name: Decode keystore
         env:
@@ -60,7 +75,7 @@ jobs:
           if [ -n "$KEYSTORE_BASE64" ]; then
             echo "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/somna-release.jks"
             echo "SOMNA_KEYSTORE_PATH=$RUNNER_TEMP/somna-release.jks" >> "$GITHUB_ENV"
-          elif [ "$IS_TAG" = "true" ]; then
+          elif [ "${{ steps.version.outputs.release }}" = "true" ]; then
             echo "::error::Secret KEYSTORE_BASE64 manquant : une release doit toujours être signée avec le même keystore."
             exit 1
           else
@@ -96,9 +111,10 @@ jobs:
           if-no-files-found: error
 
       - name: Build changelog
-        if: env.IS_TAG == 'true'
+        if: steps.version.outputs.release == 'true'
         run: |
           VERSION="${{ steps.version.outputs.name }}"
+          TAG="${{ steps.version.outputs.tag }}"
           # 1) Section "## [x.y.z]" or "## x.y.z" of CHANGELOG.md, 2) otherwise commits since the previous tag.
           if [ -f CHANGELOG.md ] && grep -qE "^## \[?${VERSION//./\\.}\]?" CHANGELOG.md; then
             awk -v v="$VERSION" '
@@ -107,18 +123,20 @@ jobs:
               found { print }
             ' CHANGELOG.md > changelog.md
           else
-            PREVIOUS=$(git describe --tags --abbrev=0 "${GITHUB_REF_NAME}^" 2>/dev/null || true)
-            if [ -n "$PREVIOUS" ]; then RANGE="$PREVIOUS..$GITHUB_REF_NAME"; else RANGE="$GITHUB_REF_NAME"; fi
+            PREVIOUS=$(git describe --tags --abbrev=0 --exclude "$TAG" HEAD 2>/dev/null || true)
+            if [ -n "$PREVIOUS" ]; then RANGE="$PREVIOUS..HEAD"; else RANGE="HEAD"; fi
             git log "$RANGE" --no-merges --pretty="- %s" > changelog.md
           fi
           if [ ! -s changelog.md ]; then echo "- Améliorations et corrections" > changelog.md; fi
           cat changelog.md
 
       - name: Publish GitHub Release
-        if: env.IS_TAG == 'true'
+        if: steps.version.outputs.release == 'true'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref_name }}
+          # Creates the tag on this commit when it doesn't exist yet (release from the VERSION file).
+          tag_name: ${{ steps.version.outputs.tag }}
+          target_commitish: ${{ github.sha }}
           name: Somna ${{ steps.version.outputs.name }}
           body_path: changelog.md
           files: ${{ steps.apk.outputs.path }}
