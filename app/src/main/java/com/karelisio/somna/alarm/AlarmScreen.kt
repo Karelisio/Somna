@@ -144,7 +144,9 @@ fun AlarmScreen(
         }
     }
     LaunchedEffect(missionOpen) {
-        AlarmService.command(context, AlarmService.ACTION_MISSION) { putExtra(AlarmService.EXTRA_DUCK, missionOpen) }
+        if (AlarmRuntime.session.value?.ringing == true) {
+            AlarmService.command(context, AlarmService.ACTION_MISSION) { putExtra(AlarmService.EXTRA_DUCK, missionOpen) }
+        }
     }
 
     val enterEffects = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
@@ -160,6 +162,12 @@ fun AlarmScreen(
         ) {
             Spacer(Modifier.height(40.dp))
             RollingText(TimeFormat.clock(now), style = ClockStyle.copy(fontSize = 96.sp, lineHeight = 100.sp), color = textColor)
+            Text(
+                java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("EEEE d MMMM", java.util.Locale.FRENCH)),
+                style = MaterialTheme.typography.titleMedium,
+                color = textColor.copy(alpha = 0.75f),
+            )
+            Spacer(Modifier.height(12.dp))
             val spec = session?.spec ?: outcome?.spec
             Text(
                 when (stage) {
@@ -184,11 +192,19 @@ fun AlarmScreen(
                 label = "alarmStage",
             ) { current ->
                 when (current) {
-                    Stage.Calm, Stage.Sunrise -> TextButton(onClick = { AlarmService.command(context, AlarmService.ACTION_DISMISS) }) {
-                        Text("Je suis réveillé", color = textColor, style = MaterialTheme.typography.titleMedium)
+                    Stage.Calm, Stage.Sunrise -> Button(
+                        onClick = { AlarmService.command(context, AlarmService.ACTION_DISMISS) },
+                        shapes = ButtonDefaults.shapes(),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.Black.copy(alpha = 0.28f), contentColor = Color.White),
+                        modifier = Modifier.height(56.dp),
+                    ) {
+                        Icon(Icons.Rounded.WbSunny, null)
+                        Spacer(Modifier.width(10.dp))
+                        Text("Je suis réveillé", style = MaterialTheme.typography.titleMedium)
                     }
                     Stage.Ringing -> RingingControls(
                         spec = session?.spec,
+                        contentColor = textColor,
                         onSnooze = { AlarmService.command(context, AlarmService.ACTION_SNOOZE) },
                         onDismiss = {
                             val mission = session?.spec?.mission?.let { runCatching { Mission.valueOf(it) }.getOrNull() } ?: Mission.NONE
@@ -216,7 +232,7 @@ fun AlarmScreen(
 }
 
 @Composable
-private fun RingingControls(spec: AlarmSpec?, onSnooze: () -> Unit, onDismiss: () -> Unit) {
+private fun RingingControls(spec: AlarmSpec?, contentColor: Color, onSnooze: () -> Unit, onDismiss: () -> Unit) {
     val haptics = rememberHaptics()
     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
         FilledTonalButton(
@@ -231,13 +247,13 @@ private fun RingingControls(spec: AlarmSpec?, onSnooze: () -> Unit, onDismiss: (
             Spacer(Modifier.width(10.dp))
             Text("Snooze · ${spec?.snoozeMinutes ?: 9} min", style = MaterialTheme.typography.titleLarge)
         }
-        SlideToStop(onDismiss)
+        SlideToStop(contentColor, onDismiss)
     }
 }
 
 /** Slide the sun to the right to stop the alarm (no accidental dismiss). */
 @Composable
-private fun SlideToStop(onStop: () -> Unit) {
+private fun SlideToStop(contentColor: Color, onStop: () -> Unit) {
     val haptics = rememberHaptics()
     val scope = rememberCoroutineScope()
     val offset = remember { Animatable(0f) }
@@ -248,7 +264,7 @@ private fun SlideToStop(onStop: () -> Unit) {
             .fillMaxWidth()
             .height(80.dp)
             .clip(CircleShape)
-            .background(Color.White.copy(alpha = 0.22f)),
+            .background(contentColor.copy(alpha = 0.14f)),
         contentAlignment = Alignment.CenterStart,
     ) {
         val density = LocalDensity.current
@@ -257,7 +273,7 @@ private fun SlideToStop(onStop: () -> Unit) {
         Text(
             "Glisse pour arrêter",
             style = MaterialTheme.typography.titleMedium,
-            color = Color.White.copy(alpha = 1f - (offset.value / max).coerceIn(0f, 1f)),
+            color = contentColor.copy(alpha = 0.85f * (1f - (offset.value / max).coerceIn(0f, 1f))),
             modifier = Modifier.align(Alignment.Center),
         )
         Box(

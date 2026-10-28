@@ -17,6 +17,7 @@ import com.karelisio.somna.R
 import com.karelisio.somna.container
 import com.karelisio.somna.core.TimeFormat
 import com.karelisio.somna.data.Mission
+import com.karelisio.somna.routine.SleepSoundService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -112,6 +113,7 @@ class AlarmService : Service() {
         acquireWakeLock(RING_TIMEOUT_MINUTES + 2)
         NotificationManagerCompat.from(this).cancel(Notifications.ID_SNOOZE_BASE + spec.alarmId)
         refreshNotification()
+        SleepSoundService.stop(this) // no rain over the alarm
         player?.stop()
         player = AlarmPlayer(this, ringSpec).also { it.start(scope) }
         timeoutJob?.cancel()
@@ -154,7 +156,7 @@ class AlarmService : Service() {
             .setContentText("Le réveil de ${TimeFormat.clock(session.spec.triggerAt)} a sonné pendant $RING_TIMEOUT_MINUTES min.")
             .setAutoCancel(true)
             .build()
-        runCatching { NotificationManagerCompat.from(this).notify(Notifications.ID_MISSED, notification) }
+        Notifications.post(this, Notifications.ID_MISSED, notification)
         AlarmRuntime.outcome.value = AlarmOutcome.TimedOut(session.spec)
         finishSession()
     }
@@ -277,7 +279,7 @@ class AlarmService : Service() {
             .setChronometerCountDown(true)
             .addAction(0, "Arrêter le réveil", cancel)
             .build()
-        runCatching { NotificationManagerCompat.from(this).notify(Notifications.ID_SNOOZE_BASE + spec.alarmId, notification) }
+        Notifications.post(this, Notifications.ID_SNOOZE_BASE + spec.alarmId, notification)
     }
 
     private fun activityIntent(): PendingIntent = PendingIntent.getActivity(

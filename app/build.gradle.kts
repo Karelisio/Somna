@@ -67,6 +67,10 @@ android {
         resources.excludes += setOf("/META-INF/{AL2.0,LGPL2.1}", "/META-INF/*.version", "DebugProbesKt.bin")
     }
 
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
+    }
+
     lint {
         abortOnError = false
         checkReleaseBuilds = false
@@ -124,4 +128,29 @@ dependencies {
     implementation(libs.kotlinx.coroutines.android)
 
     testImplementation(libs.junit)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.test.core)
+    testImplementation(platform(libs.androidx.compose.bom))
+    testImplementation(libs.androidx.compose.ui.test.junit4)
+    debugImplementation(libs.androidx.compose.ui.test.manifest)
+}
+
+// Screenshot tests (Robolectric native graphics) only run on demand: ./gradlew testDebugUnitTest -Pscreenshots
+tasks.withType<Test>().configureEach {
+    // Robolectric needs these on recent JDKs.
+    jvmArgs(
+        "--add-exports=java.base/jdk.internal.access=ALL-UNNAMED",
+        "--add-opens=java.base/java.io=ALL-UNNAMED",
+        "--add-opens=java.base/java.lang=ALL-UNNAMED",
+    )
+    maxHeapSize = "3g"
+    // Optional Maven mirror for Robolectric's Android jars (-Probolectric.repo=…).
+    providers.gradleProperty("robolectric.repo").orNull?.let { systemProperty("robolectric.dependency.repo.url", it) }
+    val screenshots = providers.gradleProperty("screenshots")
+    if (screenshots.isPresent) {
+        systemProperty("somna.screenshots.dir", rootProject.layout.buildDirectory.dir("screenshots").get().asFile.absolutePath)
+        filter { includeTestsMatching("*ScreenshotTest*") }
+    } else {
+        exclude("**/screenshots/**")
+    }
 }

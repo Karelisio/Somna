@@ -94,10 +94,10 @@ fun OnboardingScreen(onFinished: () -> Unit) {
     // Auto-advance shortly after a permission gets granted on its page (time for the check animation).
     val current = pages[pager.currentPage]
     val currentGranted = (current as? Page.Permission)?.let { granted[it.permission.id] } == true
-    var advancedFor by remember { mutableStateOf<String?>(null) }
+    var requestedId by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(current, currentGranted) {
-        if (current is Page.Permission && currentGranted && advancedFor != current.permission.id && version > 0) {
-            advancedFor = current.permission.id
+        if (current is Page.Permission && currentGranted && requestedId == current.permission.id) {
+            requestedId = null
             delay(1_100)
             if (pages[pager.currentPage] == current) next()
         }
@@ -177,7 +177,12 @@ fun OnboardingScreen(onFinished: () -> Unit) {
                         Spacer(Modifier.weight(1f))
                         PrimaryButton(if (ok) "Continuer" else "Autoriser") {
                             haptics.click()
-                            if (ok) next() else requester.request(current.permission)
+                            if (ok) {
+                                next()
+                            } else {
+                                requestedId = current.permission.id
+                                requester.request(current.permission)
+                            }
                         }
                     }
                     Page.Done -> {

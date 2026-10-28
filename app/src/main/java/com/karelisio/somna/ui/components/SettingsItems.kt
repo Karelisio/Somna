@@ -197,7 +197,7 @@ fun SettingsSlider(
             Slider(
                 value = value,
                 onValueChange = {
-                    if (steps > 0 && it.roundToInt() != value.roundToInt()) haptics.tick()
+                    if (label(it) != label(value)) haptics.tick()
                     onValueChange(it)
                 },
                 valueRange = valueRange,

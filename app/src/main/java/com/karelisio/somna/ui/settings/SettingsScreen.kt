@@ -129,7 +129,7 @@ fun SettingsScreen(onBack: () -> Unit, onOpenPermissions: () -> Unit, onOpenBatt
                             onValueChange = { cycle = it },
                             onValueChangeFinished = { somna.edit { setCycleMinutes(cycle.roundToInt()) } },
                             valueRange = SleepCalculator.MIN_CYCLE_MINUTES.toFloat()..SleepCalculator.MAX_CYCLE_MINUTES.toFloat(),
-                            steps = SleepCalculator.MAX_CYCLE_MINUTES - SleepCalculator.MIN_CYCLE_MINUTES - 1,
+                            steps = 0,
                             label = { "${it.roundToInt()} min" },
                         )
                     },
@@ -142,7 +142,7 @@ fun SettingsScreen(onBack: () -> Unit, onOpenPermissions: () -> Unit, onOpenBatt
                             onValueChange = { fallAsleep = it },
                             onValueChangeFinished = { somna.edit { setFallAsleepMinutes(fallAsleep.roundToInt()) } },
                             valueRange = 0f..SleepCalculator.MAX_FALL_ASLEEP_MINUTES.toFloat(),
-                            steps = SleepCalculator.MAX_FALL_ASLEEP_MINUTES - 1,
+                            steps = 0,
                             label = { "${it.roundToInt()} min" },
                         )
                     },
@@ -236,7 +236,7 @@ fun SettingsScreen(onBack: () -> Unit, onOpenPermissions: () -> Unit, onOpenBatt
                             onValueChange = { v = it },
                             onValueChangeFinished = { somna.edit { setSnoozeMinutes(v.roundToInt()) } },
                             valueRange = 1f..30f,
-                            steps = 28,
+                            steps = 0,
                             label = { "${it.roundToInt()} min" },
                         )
                     },

@@ -76,7 +76,7 @@ class BedtimeReceiver : BroadcastReceiver() {
             .addAction(0, "J'y vais", action(ACTION_GOING, 31))
             .addAction(0, "Dans 15 min", action(ACTION_LATER, 32))
             .build()
-        runCatching { NotificationManagerCompat.from(context).notify(Notifications.ID_BEDTIME, notification) }
+        Notifications.post(context, Notifications.ID_BEDTIME, notification)
     }
 
     companion object {

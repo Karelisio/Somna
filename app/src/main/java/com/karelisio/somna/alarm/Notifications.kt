@@ -1,10 +1,14 @@
 package com.karelisio.somna.alarm
 
+import android.Manifest
+import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
+import android.content.pm.PackageManager
 import android.os.Build
 import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
 
 object Notifications {
     const val CH_ALARM = "alarm"
@@ -55,6 +59,14 @@ object Notifications {
     }
 
     fun canPost(context: Context): Boolean = NotificationManagerCompat.from(context).areNotificationsEnabled()
+
+    /** Posts a notification if allowed (POST_NOTIFICATIONS on Android 13+). */
+    fun post(context: Context, id: Int, notification: Notification) {
+        if (Build.VERSION.SDK_INT >= 33 &&
+            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) return
+        runCatching { NotificationManagerCompat.from(context).notify(id, notification) }
+    }
 
     fun canUseFullScreen(context: Context): Boolean =
         Build.VERSION.SDK_INT < 34 || context.getSystemService(NotificationManager::class.java).canUseFullScreenIntent()

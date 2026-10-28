@@ -4,7 +4,6 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import androidx.core.app.NotificationCompat
-import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.edit
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
@@ -47,10 +46,8 @@ class UpdateWorker(context: Context, params: WorkerParameters) : CoroutineWorker
             .setContentIntent(open)
             .setAutoCancel(true)
             .build()
-        runCatching {
-            NotificationManagerCompat.from(applicationContext).notify(Notifications.ID_UPDATE, notification)
-            prefs.edit { putString("notified", info.version) }
-        }
+        Notifications.post(applicationContext, Notifications.ID_UPDATE, notification)
+        prefs.edit { putString("notified", info.version) }
     }
 
     companion object {

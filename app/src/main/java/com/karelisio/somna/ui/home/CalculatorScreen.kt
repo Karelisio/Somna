@@ -26,6 +26,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AlarmAdd
 import androidx.compose.material.icons.rounded.Bedtime
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Remove
 import androidx.compose.material.icons.rounded.Add
@@ -133,7 +134,7 @@ fun CalculatorScreen(
                 options = CalcMode.entries,
                 selected = vm.mode,
                 onSelect = { vm.mode = it },
-                label = { if (it == CalcMode.WAKE_AT) "Me lever à…" else "Me coucher maintenant" },
+                label = { if (it == CalcMode.WAKE_AT) "Je me lève à…" else "Je me couche" },
                 icon = { if (it == CalcMode.WAKE_AT) Icons.Rounded.WbSunny else Icons.Rounded.Bedtime },
                 modifier = Modifier.padding(horizontal = 16.dp),
             )
@@ -349,7 +350,7 @@ private fun SleepOptionCard(option: SleepOption, past: Boolean, onClick: () -> U
                     style = if (option.recommended) MaterialTheme.typography.displaySmall else MaterialTheme.typography.headlineMedium,
                 )
                 Text(
-                    "${option.cycles} cycles · ${TimeFormat.duration(option.sleepDuration)} de sommeil" + if (past) " · déjà passé" else "",
+                    "${option.cycles} cycles · ${TimeFormat.duration(option.sleepDuration)}" + if (past) " · passé" else "",
                     style = MaterialTheme.typography.bodyMedium,
                     color = content.copy(alpha = 0.8f),
                 )
@@ -435,11 +436,11 @@ fun PermissionReminder(onOpen: () -> Unit) {
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                TextButton(onClick = { somna.edit { setPermissionReminderDismissedAt(System.currentTimeMillis()) } }) {
-                    Text("Plus tard")
-                }
                 Button(onClick = onOpen, shapes = ButtonDefaults.shapes(), contentPadding = ButtonDefaults.SmallContentPadding) {
                     Text("Vérifier")
+                }
+                IconButton(onClick = { somna.edit { setPermissionReminderDismissedAt(System.currentTimeMillis()) } }) {
+                    Icon(Icons.Rounded.Close, "Me le rappeler plus tard")
                 }
             }
         }

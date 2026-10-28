@@ -307,7 +307,11 @@ private fun RemainingTime(endsAt: Long, playing: Boolean, modifier: Modifier = M
         }
     }
     Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
-        RollingText(text, style = MaterialTheme.typography.headlineMedium)
+        if (playing) {
+            RollingText(text, style = MaterialTheme.typography.headlineMedium)
+        } else {
+            Text(text, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
         if (playing && endsAt > 0) {
             Text("arrêt en douceur à ${TimeFormat.clock(endsAt)}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
