@@ -2,6 +2,12 @@
 
 Les notes d'une version sont reprises telles quelles dans la GitHub Release et affichées dans l'appli.
 
+## 1.2.0
+
+- **Sons réels** : feu de cheminée, pluie, vagues et oiseaux sont désormais de vrais enregistrements, en stéréo.
+- **Boucles sans couture** : enchaînements en fondu aux moments calmes, à des endroits aléatoires — aucun raccord ni motif répétitif audible, même toute la nuit.
+- **Lecture plus robuste** : mémoire tampon audio plus large, contre les saccades écran éteint.
+
 ## 1.1.0
 
 - **Sieste** : 20 min, 30 min ou un cycle complet en un tap depuis le calculateur.

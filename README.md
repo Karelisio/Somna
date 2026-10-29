@@ -70,7 +70,8 @@ app/src/main/java/com/karelisio/somna/
 ├── data/         DataStore (réglages), Room (réveils, journal), statistiques
 ├── alarm/        planification, receivers, service au premier plan, lecteur crescendo,
 │                 vibration progressive, réveil intelligent, écran de réveil
-├── audio/        synthèse procédurale des sons (aucun fichier audio embarqué)
+├── audio/        enregistrements réels bouclés sans couture, synthèse procédurale (carillon,
+│                 bruit blanc, et secours si un enregistrement ne peut être décodé)
 ├── routine/      rappel du coucher, sons d'endormissement
 ├── update/       GitHub Releases, WorkManager, PackageInstaller
 ├── permissions/  autorisations, retour automatique, surcouches fabricant
@@ -80,3 +81,14 @@ app/src/main/java/com/karelisio/somna/
 ```
 
 Polices : [Outfit](https://fonts.google.com/specimen/Outfit) et [Figtree](https://fonts.google.com/specimen/Figtree), licence SIL Open Font License 1.1.
+
+Sons d'ambiance : enregistrements de [Freesound](https://freesound.org), domaine public (CC0), recadrés, nivelés et encodés en OGG Vorbis (`app/src/main/res/raw/`, via `scripts/prepare_ambience.py`).
+
+| Son | Enregistrement | Auteur |
+|---|---|---|
+| Feu de cheminée | [Fire in Fireplace, Close Up, Reverberant](https://freesound.org/s/81801/) | silencyo |
+| Pluie | [Rain Falling On The Greenhouse](https://freesound.org/s/725603/) | WhiteNoiseSleeper |
+| Vagues | [Calm ocean waves](https://freesound.org/s/578524/) | SamsterBirdies |
+| Oiseaux | [Dawn Chorus Birdsong](https://freesound.org/s/573080/) | squashy555 |
+
+Ils tournent en boucle sans couture : lus par longs passages aléatoires (16 à 40 s) enchaînés en fondu à puissance constante de 3 s, uniquement aux moments calmes de l'enregistrement — ni raccord audible, ni motif qui se répète.

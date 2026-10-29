@@ -12,12 +12,14 @@ import kotlin.math.max
 import kotlin.math.sqrt
 
 /**
- * Streams a procedural [SoundType] through an [AudioTrack] on a dedicated audio thread.
+ * Streams a [SoundType] — its field recording looped seamlessly, or its procedural synthesis — through
+ * an [AudioTrack] on a dedicated audio thread.
  * [usage] is [AudioAttributes.USAGE_ALARM] (plays even in silent mode) or [AudioAttributes.USAGE_MEDIA].
  */
 class SynthPlayer(context: Context, val type: SoundType, private val usage: Int) {
 
-    private val audioManager = context.applicationContext.getSystemService(AudioManager::class.java)
+    private val appContext = context.applicationContext
+    private val audioManager = appContext.getSystemService(AudioManager::class.java)
 
     @Volatile
     private var session: AtomicBoolean? = null
@@ -62,10 +64,15 @@ class SynthPlayer(context: Context, val type: SoundType, private val usage: Int)
         Process.setThreadPriority(Process.THREAD_PRIORITY_AUDIO)
         var track: AudioTrack? = null
         try {
-            val sampleRate = SoundGenerators.SAMPLE_RATE
-            val generator = SoundGenerators.create(type)
-            val minBytes = AudioTrack.getMinBufferSize(sampleRate, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_FLOAT)
-            val bufferBytes = max(minBytes, sampleRate / 4 * Float.SIZE_BYTES)
+            val generator = Recordings.generator(appContext, type) ?: SoundGenerators.create(type)
+            if (!active.get()) return
+            val sampleRate = generator.sampleRate
+            val channels = generator.channels
+            val channelMask = if (channels == 2) AudioFormat.CHANNEL_OUT_STEREO else AudioFormat.CHANNEL_OUT_MONO
+            val minBytes = AudioTrack.getMinBufferSize(sampleRate, channelMask, AudioFormat.ENCODING_PCM_FLOAT)
+            // ~1 s of headroom: the audio thread can be held back (screen off, aggressive OEM power
+            // management) without the track running dry, which would be heard as stutters.
+            val bufferBytes = max(minBytes, sampleRate * channels * Float.SIZE_BYTES)
             val alarm = usage == AudioAttributes.USAGE_ALARM
             val attributes = AudioAttributes.Builder()
                 .setUsage(usage)
@@ -74,7 +81,7 @@ class SynthPlayer(context: Context, val type: SoundType, private val usage: Int)
             val format = AudioFormat.Builder()
                 .setSampleRate(sampleRate)
                 .setEncoding(AudioFormat.ENCODING_PCM_FLOAT)
-                .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
+                .setChannelMask(channelMask)
                 .build()
             val builder = AudioTrack.Builder()
                 .setAudioAttributes(attributes)
@@ -90,7 +97,8 @@ class SynthPlayer(context: Context, val type: SoundType, private val usage: Int)
                 return
             }
 
-            val buffer = FloatArray(CHUNK)
+            val samples = CHUNK * channels
+            val buffer = FloatArray(samples)
             // Per-sample one-pole ramp (~50 ms time constant): starts from silence, no zipper noise.
             val smoothing = 1f / (0.05f * sampleRate)
             var gain = 0f
@@ -100,14 +108,14 @@ class SynthPlayer(context: Context, val type: SoundType, private val usage: Int)
                 generator.render(buffer, CHUNK)
                 val target = targetVolume
                 var sumSquares = 0f
-                for (i in 0 until CHUNK) {
-                    gain += (target - gain) * smoothing
+                for (i in 0 until samples) {
+                    if (i % channels == 0) gain += (target - gain) * smoothing
                     val s = buffer[i] * gain
                     buffer[i] = s
                     sumSquares += s * s
                 }
-                level = level * 0.7f + sqrt(sumSquares / CHUNK).coerceAtMost(1f) * 0.3f
-                if (track.write(buffer, 0, CHUNK, AudioTrack.WRITE_BLOCKING) < 0) break
+                level = level * 0.7f + sqrt(sumSquares / samples).coerceAtMost(1f) * 0.3f
+                if (track.write(buffer, 0, samples, AudioTrack.WRITE_BLOCKING) < 0) break
             }
 
             // Already muted by stop(): let the mixer's volume ramp finish, then drop the buffered tail.

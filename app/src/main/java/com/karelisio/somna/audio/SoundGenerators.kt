@@ -3,9 +3,15 @@ package com.karelisio.somna.audio
 import kotlin.math.exp
 import kotlin.math.pow
 
-/** Fills [buffer] with [count] mono samples in [-1, 1]; successive calls continue the same stream. */
+/**
+ * Fills [buffer] with [count] frames of [channels] interleaved samples in [-1, 1];
+ * successive calls continue the same stream.
+ */
 fun interface SoundGenerator {
     fun render(buffer: FloatArray, count: Int)
+
+    val sampleRate: Int get() = SoundGenerators.SAMPLE_RATE
+    val channels: Int get() = 1
 }
 
 /** Procedural, endless and non-repeating sound generators — no audio assets needed. */

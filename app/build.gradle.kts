@@ -65,6 +65,11 @@ android {
         buildConfig = true
     }
 
+    androidResources {
+        // Recordings are read through openRawResourceFd, which needs them stored uncompressed.
+        noCompress += "ogg"
+    }
+
     packaging {
         resources.excludes += setOf("/META-INF/{AL2.0,LGPL2.1}", "/META-INF/*.version", "DebugProbesKt.bin")
     }
@@ -148,6 +153,8 @@ tasks.withType<Test>().configureEach {
     maxHeapSize = "3g"
     // Optional Maven mirror for Robolectric's Android jars (-Probolectric.repo=…).
     providers.gradleProperty("robolectric.repo").orNull?.let { systemProperty("robolectric.dependency.repo.url", it) }
+    // Optional seam check on the real recordings, decoded to raw PCM (-Ploops.dir=…, see LoopGeneratorTest).
+    providers.gradleProperty("loops.dir").orNull?.let { systemProperty("somna.loops.dir", it) }
     val screenshots = providers.gradleProperty("screenshots")
     if (screenshots.isPresent) {
         systemProperty("somna.screenshots.dir", rootProject.layout.buildDirectory.dir("screenshots").get().asFile.absolutePath)
