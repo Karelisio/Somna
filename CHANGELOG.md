@@ -2,6 +2,10 @@
 
 Les notes d'une version sont reprises telles quelles dans la GitHub Release et affichées dans l'appli.
 
+## 1.3.0
+
+- **Widget Horloge Somna** : l'heure en grand (heures au-dessus des minutes), la date et le prochain réveil, aux couleurs de ton fond d'écran, en clair comme en sombre. Redimensionnable, les chiffres s'adaptent. Aucun coût batterie : l'heure est tenue par Android.
+
 ## 1.2.1
 
 - **Réveils d'une nuit** : un réveil réglé depuis le calculateur, une sieste, le widget ou la tuile « Je me couche » se supprime tout seul une fois passé (un éventuel snooze sonne quand même).

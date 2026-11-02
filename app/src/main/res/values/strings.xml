@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Somna</string>
+    <string name="clock_widget_description">L’heure en grand, aux couleurs de ton fond d’écran, avec le prochain réveil</string>
+    <string name="clock_widget_label">Horloge Somna</string>
     <string name="widget_description">Si tu te couches maintenant, les meilleures heures de réveil</string>
 </resources>

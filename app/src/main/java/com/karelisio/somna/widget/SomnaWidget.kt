@@ -152,6 +152,7 @@ class SomnaWidget : GlanceAppWidget() {
 
         suspend fun refresh(context: Context) {
             runCatching { SomnaWidget().updateAll(context) }
+            runCatching { ClockWidgetReceiver.refresh(context) }
         }
     }
 }

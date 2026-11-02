@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Clock widget. TextClock is ticked by the system itself: no update, no battery cost. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/clock_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_clock_background"
+    android:gravity="center"
+    android:orientation="vertical"
+    android:padding="14dp">
+
+    <TextClock
+        android:id="@+id/clock_date"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:format12Hour="EEE d MMM"
+        android:format24Hour="EEE d MMM"
+        android:fontFamily="@font/figtree_medium"
+        android:includeFontPadding="false"
+        android:textColor="@color/clock_detail"
+        android:textSize="15sp" />
+
+    <!-- Hours over minutes in one view, so the line gap scales with the digits. -->
+    <TextClock
+        android:id="@+id/clock_time"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:format12Hour="hh&#10;mm"
+        android:format24Hour="HH&#10;mm"
+        android:fontFamily="@font/outfit_bold"
+        android:gravity="center"
+        android:includeFontPadding="false"
+        android:lineSpacingMultiplier="0.8"
+        android:textColor="@color/clock_digits"
+        android:textSize="64sp" />
+
+    <TextView
+        android:id="@+id/clock_alarm"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:fontFamily="@font/figtree_semibold"
+        android:includeFontPadding="false"
+        android:textColor="@color/clock_detail"
+        android:textSize="14sp"
+        android:visibility="gone" />
+</LinearLayout>

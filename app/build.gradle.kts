@@ -158,7 +158,10 @@ tasks.withType<Test>().configureEach {
     val screenshots = providers.gradleProperty("screenshots")
     if (screenshots.isPresent) {
         systemProperty("somna.screenshots.dir", rootProject.layout.buildDirectory.dir("screenshots").get().asFile.absolutePath)
-        filter { includeTestsMatching("*ScreenshotTest*") }
+        filter {
+            includeTestsMatching("*ScreenshotTest*")
+            includeTestsMatching("*ClockWidgetShot*")
+        }
     } else {
         exclude("**/screenshots/**")
     }

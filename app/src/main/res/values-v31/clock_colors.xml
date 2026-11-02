@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="clock_background">@android:color/system_accent1_50</color>
+    <color name="clock_digits">@android:color/system_accent1_700</color>
+    <color name="clock_detail">@android:color/system_accent1_600</color>
+</resources>

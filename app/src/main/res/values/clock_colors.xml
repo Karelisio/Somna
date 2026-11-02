@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Clock widget: primaryContainer / onPrimaryContainer of the night-blue palette; dynamic (Material You) from Android 12. -->
+<resources>
+    <color name="clock_background">#DEE0FF</color>
+    <color name="clock_digits">#2E3C91</color>
+    <color name="clock_detail">#4A5590</color>
+</resources>

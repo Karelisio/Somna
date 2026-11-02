@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="clock_background">#2E3C91</color>
+    <color name="clock_digits">#DDE1FF</color>
+    <color name="clock_detail">#B9C0F0</color>
+</resources>
