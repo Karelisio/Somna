@@ -30,6 +30,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.AutoDelete
 import androidx.compose.material.icons.rounded.Calculate
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Extension
@@ -152,6 +153,22 @@ fun AlarmEditScreen(alarmId: Int, onBack: () -> Unit) {
                                 icon = Icons.Rounded.SkipNext,
                                 checked = skipped,
                                 onCheckedChange = { vm.toggleSkip() },
+                            )
+                        },
+                    ),
+                )
+            } else if (!a.repeating) {
+                SettingsGroup(
+                    modifier = Modifier.padding(top = 12.dp),
+                    items = listOf(
+                        {
+                            SettingsSwitch(
+                                title = "Supprimer après la sonnerie",
+                                subtitle = if (a.autoDelete) "Réveil d'une nuit : il disparaît de la liste une fois passé"
+                                else "Il reste dans la liste, désactivé, pour resservir",
+                                icon = Icons.Rounded.AutoDelete,
+                                checked = a.autoDelete,
+                                onCheckedChange = { v -> vm.update { it.copy(autoDelete = v) } },
                             )
                         },
                     ),

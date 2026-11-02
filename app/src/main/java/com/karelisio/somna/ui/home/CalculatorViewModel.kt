@@ -71,7 +71,7 @@ class CalculatorViewModel(private val container: AppContainer) : ViewModel() {
             CalcMode.SLEEP_NOW -> {
                 val t = option.time
                 val existed = container.database.alarmDao().findOneShot(t.hour, t.minute)?.enabled == true
-                val alarm = container.alarms.create(t.hour, t.minute)
+                val alarm = container.alarms.create(t.hour, t.minute, autoDelete = true)
                 container.sleep.markBedtime()
                 CreatedAlarm(alarm, existed, "Réveil réglé à ${TimeFormat.clock(t)} · bonne nuit 🌙")
             }
@@ -80,7 +80,7 @@ class CalculatorViewModel(private val container: AppContainer) : ViewModel() {
                 val existed = container.database.alarmDao().findOneShot(wake.hour, wake.minute)?.enabled == true
                 val bedtime = option.time
                 if (bedtime.isAfter(now)) container.settings.setBedtimeOverride(bedtime.toEpochMillis())
-                val alarm = container.alarms.create(wake.hour, wake.minute)
+                val alarm = container.alarms.create(wake.hour, wake.minute, autoDelete = true)
                 val reminder = if (bedtime.isAfter(now)) " · rappel à ${TimeFormat.clock(bedtime)}" else ""
                 CreatedAlarm(alarm, existed, "Réveil réglé à ${TimeFormat.clock(wake)}$reminder")
             }

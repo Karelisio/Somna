@@ -1,6 +1,8 @@
 package com.karelisio.somna.data
 
 import android.content.Context
+import androidx.room.AutoMigration
+import androidx.room.ColumnInfo
 import androidx.room.Dao
 import androidx.room.Database
 import androidx.room.Delete
@@ -30,6 +32,8 @@ data class AlarmEntity(
     val smartWakeMinutes: Int = 0,
     val mission: String = Mission.NONE.name,
     val createdAt: Long = System.currentTimeMillis(),
+    /** One-shot that removes itself once it has rung (set from the calculator, naps, widget, tile). */
+    @ColumnInfo(defaultValue = "0") val autoDelete: Boolean = false,
 ) {
     val repeating: Boolean get() = days != 0
     val missionType: Mission get() = runCatching { Mission.valueOf(mission) }.getOrDefault(Mission.NONE)
@@ -106,7 +110,12 @@ interface SleepDao {
     suspend fun delete(entry: SleepEntry)
 }
 
-@Database(entities = [AlarmEntity::class, SleepEntry::class], version = 1, exportSchema = true)
+@Database(
+    entities = [AlarmEntity::class, SleepEntry::class],
+    version = 2,
+    exportSchema = true,
+    autoMigrations = [AutoMigration(from = 1, to = 2)],
+)
 abstract class SomnaDatabase : RoomDatabase() {
     abstract fun alarmDao(): AlarmDao
     abstract fun sleepDao(): SleepDao

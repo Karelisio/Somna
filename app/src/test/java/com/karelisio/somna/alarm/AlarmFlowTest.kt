@@ -140,6 +140,26 @@ class AlarmFlowTest {
     }
 
     @Test
+    fun `a one-night alarm deletes itself once it has rung, a regular one-shot is only disabled`() = runBlocking {
+        val tonight = app.container.alarms.create(6, 50, autoDelete = true)
+        val regular = app.container.alarms.create(7, 10)
+        for (alarm in listOf(tonight, regular)) {
+            app.container.alarms.onOccurrenceConsumed(app.container.scheduler.snapshot.specs().first { it.alarmId == alarm.id })
+        }
+        assertNull(app.container.alarms.get(tonight.id))
+        assertEquals(false, app.container.alarms.get(regular.id)?.enabled)
+        assertTrue(app.container.scheduler.snapshot.specs().none { it.alarmId == tonight.id || it.alarmId == regular.id })
+    }
+
+    @Test
+    fun `a one-night alarm that rang before unlock is deleted on the next reschedule`() = runBlocking {
+        val tonight = app.container.alarms.create(6, 40, autoDelete = true)
+        app.container.scheduler.snapshot.markOneShotFired(tonight.id)
+        app.container.alarms.rescheduleAll()
+        assertNull(app.container.alarms.get(tonight.id))
+    }
+
+    @Test
     fun `creating an alarm schedules an alarm clock plus the sunrise`() = runBlocking {
         val alarm = app.container.alarms.create(6, 50)
         val scheduled = shadowOf(app.getSystemService(AlarmManager::class.java)).scheduledAlarms

@@ -2,6 +2,11 @@
 
 Les notes d'une version sont reprises telles quelles dans la GitHub Release et affichées dans l'appli.
 
+## 1.2.1
+
+- **Réveils d'une nuit** : un réveil réglé depuis le calculateur, une sieste, le widget ou la tuile « Je me couche » se supprime tout seul une fois passé (un éventuel snooze sonne quand même).
+- Les réveils ponctuels créés à la main restent dans la liste, désactivés, pour resservir ; l'interrupteur « Supprimer après la sonnerie » de l'éditeur permet de choisir.
+
 ## 1.2.0
 
 - **Sons réels** : feu de cheminée, pluie, vagues et oiseaux sont désormais de vrais enregistrements, en stéréo.

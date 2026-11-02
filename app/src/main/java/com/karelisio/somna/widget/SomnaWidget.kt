@@ -162,7 +162,7 @@ class CreateAlarmAction : ActionCallback {
         val hour = parameters[hourKey] ?: return
         val minute = parameters[minuteKey] ?: return
         val container = context.container
-        container.alarms.create(hour, minute)
+        container.alarms.create(hour, minute, autoDelete = true)
         container.sleep.markBedtime()
         Handler(Looper.getMainLooper()).post {
             Toast.makeText(context, "Réveil réglé à ${"%02d:%02d".format(hour, minute)} · bonne nuit 🌙", Toast.LENGTH_SHORT).show()

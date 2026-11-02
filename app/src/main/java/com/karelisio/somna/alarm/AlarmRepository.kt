@@ -24,7 +24,11 @@ class AlarmRepository(
 
     suspend fun get(id: Int): AlarmEntity? = dao.get(id)
 
-    /** Creates (or re-enables an identical one-shot) alarm using the default alarm settings. */
+    /**
+     * Creates (or re-enables an identical one-shot) alarm using the default alarm settings.
+     * [autoDelete]: a one-shot set for tonight (calculator, nap…) that removes itself once it has rung;
+     * an identical alarm the user already had keeps its own behaviour.
+     */
     suspend fun create(
         hour: Int,
         minute: Int,
@@ -32,6 +36,7 @@ class AlarmRepository(
         label: String = "",
         sunrise: Boolean? = null,
         smartWakeMinutes: Int? = null,
+        autoDelete: Boolean = false,
     ): AlarmEntity {
         val s = settingsRepo.current()
         val existing = if (days == 0) dao.findOneShot(hour, minute) else null
@@ -42,6 +47,7 @@ class AlarmRepository(
                 hour = hour, minute = minute, days = days, label = label,
                 sound = s.defaultSound, vibrate = s.vibration, sunrise = sunrise ?: s.sunriseEnabled,
                 smartWakeMinutes = smartWakeMinutes ?: s.smartWakeMinutes, mission = s.mission.name,
+                autoDelete = autoDelete && days == 0,
             )
             fresh.copy(id = dao.insert(fresh).toInt())
         }
@@ -84,7 +90,7 @@ class AlarmRepository(
     suspend fun rescheduleAll() {
         val s = settingsRepo.current()
         scheduler.snapshot.consumeFiredOneShots().forEach { id ->
-            dao.get(id)?.takeIf { !it.repeating }?.let { dao.update(it.copy(enabled = false)) }
+            dao.get(id)?.takeIf { !it.repeating }?.let { retire(it) }
         }
         dao.all().forEach { scheduler.schedule(it, s) }
         onAlarmsChanged()
@@ -103,7 +109,7 @@ class AlarmRepository(
     suspend fun createNap(minutes: Int): AlarmEntity {
         val s = settingsRepo.current()
         val at = LocalDateTime.now().plusMinutes((s.fallAsleepMinutes + minutes).toLong() + 1).withSecond(0).withNano(0)
-        return create(at.hour, at.minute, label = "Sieste", sunrise = false, smartWakeMinutes = 0)
+        return create(at.hour, at.minute, label = "Sieste", sunrise = false, smartWakeMinutes = 0, autoDelete = true)
     }
 
     /** "Passer le prochain": the upcoming occurrence of a repeating alarm won't ring. */
@@ -124,7 +130,8 @@ class AlarmRepository(
 
     /**
      * An occurrence has been consumed: it rang (possibly early, through smart wake) or was dismissed
-     * during the sunrise. Re-arms repeating alarms for their next day, disables one-shots.
+     * during the sunrise. Re-arms repeating alarms for their next day; one-shots are disabled, or
+     * deleted when they were set for a single night. A pending snooze keeps ringing either way.
      */
     suspend fun onOccurrenceConsumed(spec: AlarmSpec) {
         if (spec.test) return
@@ -145,12 +152,17 @@ class AlarmRepository(
         } else {
             scheduler.snapshot.remove(spec.alarmId)
             if (unlocked) {
-                runCatching { dao.get(spec.alarmId)?.let { dao.update(it.copy(enabled = false)) } }
+                runCatching { dao.get(spec.alarmId)?.let { retire(it) } }
             } else {
                 scheduler.snapshot.markOneShotFired(spec.alarmId)
             }
         }
         if (unlocked) runCatching { onAlarmsChanged() }
+    }
+
+    /** A one-shot that has rung: gone if it was for a single night, otherwise kept, disabled, for reuse. */
+    private suspend fun retire(alarm: AlarmEntity) {
+        if (alarm.autoDelete) dao.delete(alarm) else dao.update(alarm.copy(enabled = false))
     }
 
     private suspend fun onAlarmsChanged() {

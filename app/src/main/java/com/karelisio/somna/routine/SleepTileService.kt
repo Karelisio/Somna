@@ -31,7 +31,7 @@ class SleepTileService : TileService() {
             val option = SleepCalculator.wakeTimesFor(
                 LocalDateTime.now(), s.cycleMinutes, s.fallAsleepMinutes, s.preferredCycles..s.preferredCycles,
             ).first()
-            container.alarms.create(option.time.hour, option.time.minute)
+            container.alarms.create(option.time.hour, option.time.minute, autoDelete = true)
             container.sleep.markBedtime()
             withContext(Dispatchers.Main) {
                 render("Réveil ${TimeFormat.clock(option.time)}")
