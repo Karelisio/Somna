@@ -6,6 +6,7 @@ import android.app.NotificationManager
 import android.content.Intent
 import androidx.test.core.app.ApplicationProvider
 import com.karelisio.somna.SomnaApp
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -157,6 +158,28 @@ class AlarmFlowTest {
         app.container.scheduler.snapshot.markOneShotFired(tonight.id)
         app.container.alarms.rescheduleAll()
         assertNull(app.container.alarms.get(tonight.id))
+    }
+
+    @Test
+    fun `once awake, the usual alarm a few minutes later is skipped and the morning is logged once`() = runBlocking {
+        val now = java.time.ZonedDateTime.now()
+        val soon = now.plusMinutes(10)
+        val usual = app.container.alarms.create(soon.hour, soon.minute, days = com.karelisio.somna.data.AlarmEntity.EVERY_DAY)
+        val later = now.plusHours(2)
+        val other = app.container.alarms.create(later.hour, later.minute)
+        app.container.alarms.skipOthersAfterWake(dismissedId = -1, now = now)
+        assertTrue(app.container.scheduler.isSkipped(app.container.alarms.get(usual.id)!!))
+        assertEquals(true, app.container.alarms.get(other.id)?.enabled)
+
+        val sleep = app.container.sleep
+        val t = System.currentTimeMillis()
+        sleep.markBedtime(t - 7 * 3_600_000L)
+        sleep.recordWake(t - 3 * 60_000L, wakeAt = t - 3 * 60_000L)
+        sleep.recordWake(t, wakeAt = t)
+        val entries = app.container.database.sleepDao().observeAll().first()
+        assertEquals(1, entries.size)
+        assertEquals(t - 7 * 3_600_000L, entries.single().bedtime)
+        assertEquals(t, entries.single().wakeTime)
     }
 
     @Test

@@ -2,6 +2,11 @@
 
 Les notes d'une version sont reprises telles quelles dans la GitHub Release et affichées dans l'appli.
 
+## 1.3.3
+
+- **Un seul réveil par matin** : une fois réveillé (réveil arrêté), les autres réveils prévus dans les 30 min suivantes ne sonnent pas ; un réveil récurrent saute seulement ce matin-là.
+- **Journal juste** : deux réveils le même matin ne comptent plus pour deux nuits ; la nuit garde l'heure de coucher déclarée.
+
 ## 1.3.2
 
 - **Widget Horloge** : chiffres encore plus grands et plus serrés, ligne du réveil plus discrète.

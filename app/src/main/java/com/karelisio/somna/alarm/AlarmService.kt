@@ -204,7 +204,10 @@ class AlarmService : Service() {
     private fun recordWake(spec: AlarmSpec) {
         if (spec.test || !UserManagerCompat.isUserUnlocked(this)) return
         container.appScope.launch {
-            withContext(NonCancellable) { runCatching { container.sleep.recordWake(spec.triggerAt) } }
+            withContext(NonCancellable) {
+                runCatching { container.sleep.recordWake(spec.triggerAt) }
+                runCatching { container.alarms.skipOthersAfterWake(spec.alarmId) }
+            }
         }
     }
 

@@ -112,6 +112,27 @@ class AlarmRepository(
         return create(at.hour, at.minute, label = "Sieste", sunrise = false, smartWakeMinutes = 0, autoDelete = true)
     }
 
+    /**
+     * Awake: other alarms due within [WOKEN_WINDOW_MINUTES] (e.g. the usual 6:40 alarm after a
+     * 6:37 cycle alarm) don't ring this time. Repeating ones skip just this occurrence.
+     */
+    suspend fun skipOthersAfterWake(dismissedId: Int, now: ZonedDateTime = ZonedDateTime.now()) {
+        val limit = now.plusMinutes(WOKEN_WINDOW_MINUTES)
+        dao.all().filter { it.enabled && it.id != dismissedId }.forEach { alarm ->
+            val next = scheduler.effectiveNext(alarm, now)
+            if (next.isAfter(limit)) return@forEach
+            if (alarm.repeating) {
+                skipNext(alarm)
+            } else {
+                AlarmService.abortPending(context, alarm.id)
+                scheduler.cancel(alarm.id)
+                scheduler.snapshot.remove(alarm.id)
+                retire(alarm)
+            }
+        }
+        onAlarmsChanged()
+    }
+
     /** "Passer le prochain": the upcoming occurrence of a repeating alarm won't ring. */
     suspend fun skipNext(alarm: AlarmEntity) {
         if (!alarm.repeating) return
@@ -163,6 +184,10 @@ class AlarmRepository(
     /** A one-shot that has rung: gone if it was for a single night, otherwise kept, disabled, for reuse. */
     private suspend fun retire(alarm: AlarmEntity) {
         if (alarm.autoDelete) dao.delete(alarm) else dao.update(alarm.copy(enabled = false))
+    }
+
+    private companion object {
+        const val WOKEN_WINDOW_MINUTES = 30L
     }
 
     private suspend fun onAlarmsChanged() {

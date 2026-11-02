@@ -42,14 +42,20 @@ class SleepRepository(private val dao: SleepDao, private val settings: SettingsR
 
     /**
      * Logs the night when an alarm is dismissed. The bedtime is the one the user declared (if within
-     * the last 16 h) or an estimate from the preferred cycles.
+     * the last 16 h) or an estimate from the preferred cycles. A second alarm the same morning doesn't
+     * add a second night: it only extends the one already logged.
      */
     suspend fun recordWake(alarmTime: Long, wakeAt: Long = System.currentTimeMillis()): Long {
         val s = settings.current()
         val declared = s.pendingBedtime.takeIf { it in (wakeAt - 16 * HOUR_MS)..<wakeAt }
-        val bedtime = declared ?: (alarmTime - (s.preferredCycles * s.cycleMinutes + s.fallAsleepMinutes) * 60_000L)
         settings.setPendingBedtime(0)
         settings.setBedtimeOverride(0)
+        val sameMorning = dao.latest()?.takeIf { wakeAt - it.wakeTime in 0..SAME_MORNING_MS }
+        if (sameMorning != null) {
+            dao.update(sameMorning.copy(bedtime = declared ?: sameMorning.bedtime, wakeTime = wakeAt))
+            return sameMorning.id
+        }
+        val bedtime = declared ?: (alarmTime - (s.preferredCycles * s.cycleMinutes + s.fallAsleepMinutes) * 60_000L)
         return dao.insert(SleepEntry(bedtime = bedtime, wakeTime = wakeAt))
     }
 
@@ -62,6 +68,7 @@ class SleepRepository(private val dao: SleepDao, private val settings: SettingsR
     companion object {
         private const val HOUR_MS = 3_600_000L
         private const val DAY_MS = 24 * HOUR_MS
+        private const val SAME_MORNING_MS = 3 * HOUR_MS
 
         fun computeStats(entries: List<SleepEntry>, days: Int): SleepStats {
             if (entries.isEmpty()) return SleepStats(0, 0, 0, 0f, null, null, emptyList())
