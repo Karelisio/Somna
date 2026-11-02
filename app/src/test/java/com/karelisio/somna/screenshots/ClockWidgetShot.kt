@@ -37,7 +37,7 @@ class ClockWidgetShot {
         val px0 = (190 * context.resources.displayMetrics.density).toInt()
         activity.setContentView(view, android.view.ViewGroup.LayoutParams(px0, px0))
         org.robolectric.shadows.ShadowLooper.idleMainLooper()
-        view.findViewById<TextView>(R.id.clock_time).setTextSize(TypedValue.COMPLEX_UNIT_DIP, (190 - 24 - 44) / 2.3f)
+        view.findViewById<TextView>(R.id.clock_time).setTextSize(TypedValue.COMPLEX_UNIT_DIP, (190 - 20 - 34) / 2.1f)
         view.findViewById<TextView>(R.id.clock_alarm).apply { visibility = View.VISIBLE; text = "⏰ demain 06:50" }
         val px = (190 * context.resources.displayMetrics.density).toInt()
         org.robolectric.shadows.ShadowLooper.idleMainLooper()

@@ -33,7 +33,7 @@ class ClockWidgetReceiver : AppWidgetProvider() {
         context.container.appScope.launch {
             try {
                 val next = runCatching { context.container.alarms.next() }.getOrNull()?.second
-                val alarm = next?.let { "⏰ ${TimeFormat.relativeDay(it.toLocalDate())} ${TimeFormat.clock(it.toLocalTime())}" }
+                val alarm = next?.let { "⏰ ${TimeFormat.relativeDay(it.toLocalDate()).lowercase()} ${TimeFormat.clock(it.toLocalTime())}" }
                 ids.forEach { id -> manager.updateAppWidget(id, views(context, manager.getAppWidgetOptions(id), alarm)) }
             } finally {
                 pending.finish()
@@ -46,11 +46,11 @@ class ClockWidgetReceiver : AppWidgetProvider() {
             // Portrait: the smallest reported width, the tallest height.
             val width = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 110).coerceAtLeast(90)
             val height = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 110).coerceAtLeast(90)
-            val details = if (alarm != null) 44 else 24
-            // Bold sans digits are ~0.58 em wide; two lines at 0.82 spacing plus the last descent take ~2.3 em.
-            val digits = min((width - 24) / 1.2f, (height - 24 - details) / 2.3f).coerceIn(28f, 150f)
+            val details = if (alarm != null) 34 else 20
+            // Bold sans digits are ~0.58 em wide; two lines at 0.76 spacing plus the last descent take ~2.1 em.
+            val digits = min((width - 20) / 1.2f, (height - 20 - details) / 2.1f).coerceIn(28f, 160f)
             setTextViewTextSize(R.id.clock_time, TypedValue.COMPLEX_UNIT_DIP, digits)
-            setTextViewTextSize(R.id.clock_date, TypedValue.COMPLEX_UNIT_DIP, (digits * 0.2f).coerceIn(12f, 18f))
+            setTextViewTextSize(R.id.clock_date, TypedValue.COMPLEX_UNIT_DIP, (digits * 0.18f).coerceIn(12f, 17f))
 
             setViewVisibility(R.id.clock_alarm, if (alarm != null) View.VISIBLE else View.GONE)
             setTextViewText(R.id.clock_alarm, alarm.orEmpty())

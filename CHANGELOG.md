@@ -2,6 +2,10 @@
 
 Les notes d'une version sont reprises telles quelles dans la GitHub Release et affichées dans l'appli.
 
+## 1.3.2
+
+- **Widget Horloge** : chiffres encore plus grands et plus serrés, ligne du réveil plus discrète.
+
 ## 1.3.1
 
 - **Widget Horloge** : chiffres en gras et plus grands, avec la police système (certaines surcouches, dont MagicOS, ignorent les polices d'appli dans les widgets).
