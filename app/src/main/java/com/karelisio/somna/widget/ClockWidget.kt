@@ -47,8 +47,8 @@ class ClockWidgetReceiver : AppWidgetProvider() {
             val width = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 110).coerceAtLeast(90)
             val height = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 110).coerceAtLeast(90)
             val details = if (alarm != null) 44 else 24
-            // Outfit bold digits are ~0.6 em wide; two lines at 0.8 spacing plus the last descent take ~2.4 em.
-            val digits = min((width - 28) / 1.3f, (height - 28 - details) / 2.4f).coerceIn(28f, 140f)
+            // Bold sans digits are ~0.58 em wide; two lines at 0.82 spacing plus the last descent take ~2.3 em.
+            val digits = min((width - 24) / 1.2f, (height - 24 - details) / 2.3f).coerceIn(28f, 150f)
             setTextViewTextSize(R.id.clock_time, TypedValue.COMPLEX_UNIT_DIP, digits)
             setTextViewTextSize(R.id.clock_date, TypedValue.COMPLEX_UNIT_DIP, (digits * 0.2f).coerceIn(12f, 18f))
 

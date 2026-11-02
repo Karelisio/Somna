@@ -2,6 +2,10 @@
 
 Les notes d'une version sont reprises telles quelles dans la GitHub Release et affichées dans l'appli.
 
+## 1.3.1
+
+- **Widget Horloge** : chiffres en gras et plus grands, avec la police système (certaines surcouches, dont MagicOS, ignorent les polices d'appli dans les widgets).
+
 ## 1.3.0
 
 - **Widget Horloge Somna** : l'heure en grand (heures au-dessus des minutes), la date et le prochain réveil, aux couleurs de ton fond d'écran, en clair comme en sombre. Redimensionnable, les chiffres s'adaptent. Aucun coût batterie : l'heure est tenue par Android.
