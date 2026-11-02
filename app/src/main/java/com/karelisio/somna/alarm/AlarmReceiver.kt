@@ -24,7 +24,7 @@ class AlarmReceiver : BroadcastReceiver() {
                     val pending = goAsync()
                     context.container.appScope.launch {
                         try {
-                            runCatching { context.container.sleep.recordWake(spec.triggerAt) }
+                            if (spec.label != AlarmRepository.NAP_LABEL) runCatching { context.container.sleep.recordWake(spec.triggerAt) }
                             runCatching { context.container.alarms.skipOthersAfterWake(spec.alarmId) }
                         } finally {
                             pending.finish()

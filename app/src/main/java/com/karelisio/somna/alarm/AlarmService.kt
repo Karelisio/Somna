@@ -205,7 +205,7 @@ class AlarmService : Service() {
         if (spec.test || !UserManagerCompat.isUserUnlocked(this)) return
         container.appScope.launch {
             withContext(NonCancellable) {
-                runCatching { container.sleep.recordWake(spec.triggerAt) }
+                if (spec.label != AlarmRepository.NAP_LABEL) runCatching { container.sleep.recordWake(spec.triggerAt) }
                 runCatching { container.alarms.skipOthersAfterWake(spec.alarmId) }
             }
         }

@@ -109,7 +109,7 @@ class AlarmRepository(
     suspend fun createNap(minutes: Int): AlarmEntity {
         val s = settingsRepo.current()
         val at = LocalDateTime.now().plusMinutes((s.fallAsleepMinutes + minutes).toLong() + 1).withSecond(0).withNano(0)
-        return create(at.hour, at.minute, label = "Sieste", sunrise = false, smartWakeMinutes = 0, autoDelete = true)
+        return create(at.hour, at.minute, label = NAP_LABEL, sunrise = false, smartWakeMinutes = 0, autoDelete = true)
     }
 
     /**
@@ -186,8 +186,11 @@ class AlarmRepository(
         if (alarm.autoDelete) dao.delete(alarm) else dao.update(alarm.copy(enabled = false))
     }
 
-    private companion object {
-        const val WOKEN_WINDOW_MINUTES = 30L
+    companion object {
+        private const val WOKEN_WINDOW_MINUTES = 30L
+
+        /** Naps are told apart by their label: they never count as a night in the journal. */
+        const val NAP_LABEL = "Sieste"
     }
 
     private suspend fun onAlarmsChanged() {

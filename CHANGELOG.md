@@ -2,6 +2,10 @@
 
 Les notes d'une version sont reprises telles quelles dans la GitHub Release et affichées dans l'appli.
 
+## 1.3.4
+
+- **Siestes hors journal** : une sieste ne compte plus comme une nuit dans le journal ni dans les statistiques.
+
 ## 1.3.3
 
 - **Un seul réveil par matin** : une fois réveillé (réveil arrêté), les autres réveils prévus dans les 30 min suivantes ne sonnent pas ; un réveil récurrent saute seulement ce matin-là.
