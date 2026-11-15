@@ -2,6 +2,10 @@
 
 Les notes d'une version sont reprises telles quelles dans la GitHub Release et affichées dans l'appli.
 
+## 1.3.5
+
+- **« Un seul réveil par matin » réglable** : interrupteur dans Réglages › Réveil, avec le délai au choix (15 min, 30 min, 1 h, 1 h 30). Activé par défaut sur 30 min.
+
 ## 1.3.4
 
 - **Siestes hors journal** : une sieste ne compte plus comme une nuit dans le journal ni dans les statistiques.

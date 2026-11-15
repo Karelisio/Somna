@@ -54,6 +54,9 @@ data class SomnaSettings(
     val mission: Mission = Mission.NONE,
     val smartWakeMinutes: Int = 0,
     val smartSensitivity: Int = 1,
+    /** Once awake (alarm dismissed), other alarms due within [skipOthersMinutes] don't ring. */
+    val skipOthersOnWake: Boolean = true,
+    val skipOthersMinutes: Int = 30,
     // Routine
     val bedtimeReminder: Boolean = true,
     val bedtimeOverride: Long = 0,
@@ -95,6 +98,8 @@ class SettingsRepository(context: Context) {
         val mission = stringPreferencesKey("mission")
         val smartWakeMinutes = intPreferencesKey("smart_wake_minutes")
         val smartSensitivity = intPreferencesKey("smart_sensitivity")
+        val skipOthersOnWake = booleanPreferencesKey("skip_others_on_wake")
+        val skipOthersMinutes = intPreferencesKey("skip_others_minutes")
         val bedtimeReminder = booleanPreferencesKey("bedtime_reminder")
         val bedtimeOverride = longPreferencesKey("bedtime_override")
         val pendingBedtime = longPreferencesKey("pending_bedtime")
@@ -129,6 +134,8 @@ class SettingsRepository(context: Context) {
             mission = p[Keys.mission]?.let { runCatching { Mission.valueOf(it) }.getOrNull() } ?: d.mission,
             smartWakeMinutes = p[Keys.smartWakeMinutes] ?: d.smartWakeMinutes,
             smartSensitivity = p[Keys.smartSensitivity] ?: d.smartSensitivity,
+            skipOthersOnWake = p[Keys.skipOthersOnWake] ?: d.skipOthersOnWake,
+            skipOthersMinutes = p[Keys.skipOthersMinutes] ?: d.skipOthersMinutes,
             bedtimeReminder = p[Keys.bedtimeReminder] ?: d.bedtimeReminder,
             bedtimeOverride = p[Keys.bedtimeOverride] ?: d.bedtimeOverride,
             pendingBedtime = p[Keys.pendingBedtime] ?: d.pendingBedtime,
@@ -167,6 +174,8 @@ class SettingsRepository(context: Context) {
     suspend fun setMission(v: Mission) = store.edit { it[Keys.mission] = v.name }
     suspend fun setSmartWakeMinutes(v: Int) = store.edit { it[Keys.smartWakeMinutes] = if (v == 0) 0 else v.coerceIn(20, 30) }
     suspend fun setSmartSensitivity(v: Int) = store.edit { it[Keys.smartSensitivity] = v.coerceIn(0, 2) }
+    suspend fun setSkipOthersOnWake(v: Boolean) = store.edit { it[Keys.skipOthersOnWake] = v }
+    suspend fun setSkipOthersMinutes(v: Int) = store.edit { it[Keys.skipOthersMinutes] = v.coerceIn(10, 120) }
     suspend fun setBedtimeReminder(v: Boolean) = store.edit { it[Keys.bedtimeReminder] = v }
     suspend fun setBedtimeOverride(v: Long) = store.edit { it[Keys.bedtimeOverride] = v }
     suspend fun setPendingBedtime(v: Long) = store.edit { it[Keys.pendingBedtime] = v }

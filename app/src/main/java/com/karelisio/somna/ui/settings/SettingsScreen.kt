@@ -19,6 +19,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.AccessTime
+import androidx.compose.material.icons.rounded.AlarmOff
 import androidx.compose.material.icons.rounded.BatteryChargingFull
 import androidx.compose.material.icons.rounded.Bedtime
 import androidx.compose.material.icons.rounded.Calculate
@@ -254,6 +255,26 @@ fun SettingsScreen(onBack: () -> Unit, onOpenPermissions: () -> Unit, onOpenBatt
                             valueRange = 1f..30f,
                             steps = 0,
                             label = { "${it.roundToInt()} min" },
+                        )
+                    },
+                    {
+                        SettingsSwitch(
+                            title = "Un seul réveil par matin",
+                            subtitle = if (s.skipOthersOnWake) "Une fois levé, les autres réveils des ${s.skipOthersMinutes} min suivantes ne sonnent pas"
+                            else "Tous les réveils sonnent, même juste après un autre",
+                            icon = Icons.Rounded.AlarmOff,
+                            checked = s.skipOthersOnWake,
+                            onCheckedChange = { v -> somna.edit { setSkipOthersOnWake(v) } },
+                            below = if (s.skipOthersOnWake) {
+                                {
+                                    ConnectedChoice(
+                                        options = listOf(15, 30, 60, 90),
+                                        selected = s.skipOthersMinutes,
+                                        onSelect = { somna.edit { setSkipOthersMinutes(it) } },
+                                        label = { if (it < 60) "$it min" else if (it == 60) "1 h" else "1 h 30" },
+                                    )
+                                }
+                            } else null,
                         )
                     },
                     {

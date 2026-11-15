@@ -113,11 +113,13 @@ class AlarmRepository(
     }
 
     /**
-     * Awake: other alarms due within [WOKEN_WINDOW_MINUTES] (e.g. the usual 6:40 alarm after a
-     * 6:37 cycle alarm) don't ring this time. Repeating ones skip just this occurrence.
+     * Awake: other alarms due within the chosen window (e.g. the usual 6:40 alarm after a 6:37 cycle
+     * alarm) don't ring this time, if enabled in the settings. Repeating ones skip just this occurrence.
      */
     suspend fun skipOthersAfterWake(dismissedId: Int, now: ZonedDateTime = ZonedDateTime.now()) {
-        val limit = now.plusMinutes(WOKEN_WINDOW_MINUTES)
+        val s = settingsRepo.current()
+        if (!s.skipOthersOnWake) return
+        val limit = now.plusMinutes(s.skipOthersMinutes.toLong())
         dao.all().filter { it.enabled && it.id != dismissedId }.forEach { alarm ->
             val next = scheduler.effectiveNext(alarm, now)
             if (next.isAfter(limit)) return@forEach
@@ -187,8 +189,6 @@ class AlarmRepository(
     }
 
     companion object {
-        private const val WOKEN_WINDOW_MINUTES = 30L
-
         /** Naps are told apart by their label: they never count as a night in the journal. */
         const val NAP_LABEL = "Sieste"
     }

@@ -137,12 +137,14 @@ fun SettingsSwitch(
     subtitle: String? = null,
     icon: ImageVector? = null,
     enabled: Boolean = true,
+    below: @Composable (ColumnScope.() -> Unit)? = null,
 ) {
     val haptics = rememberHaptics()
     SettingsRow(
         title = title,
         subtitle = subtitle,
         icon = icon,
+        below = below,
         onClick = if (enabled) ({ haptics.toggle(!checked); onCheckedChange(!checked) }) else null,
         trailing = {
             Switch(
